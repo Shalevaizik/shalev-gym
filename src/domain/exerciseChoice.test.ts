@@ -1,5 +1,5 @@
-import { matchExercise, searchExercises } from './exerciseCatalog';
-import { parseExerciseChoice, type ExerciseChoice } from './exerciseChoice';
+import { correctionKey, matchExercise, searchExercises, soundKey } from './exerciseCatalog';
+import { bestTranscript, parseExerciseChoice, type ExerciseChoice } from './exerciseChoice';
 
 function parts(text: string, history: string[] = []) {
   const result: ExerciseChoice = parseExerciseChoice(text, history);
@@ -79,5 +79,38 @@ describe('searchExercises', () => {
 
   it('puts names used before first', () => {
     expect(searchExercises('squ', ['Zercher Squat'])[0].name).toBe('Zercher Squat');
+  });
+});
+
+describe('understanding misheard exercises (requirement 15)', () => {
+  it('matches names that sound alike but are spelled differently', () => {
+    expect(matchExercise('dead left').best?.name).toBe('Deadlift');
+    expect(matchExercise('romanian dead left').best?.name).toBe('Romanian Deadlift');
+    expect(soundKey('deadlift')).toBe(soundKey('dead left'));
+  });
+
+  it('prefers exercises that fit the workout’s focus when it is unsure', () => {
+    expect(matchExercise('row', [], { focus: ['Back'] }).best?.muscle).toBe('Back');
+    expect(matchExercise('row', [], { focus: ['Shoulders'] }).best?.name).toBe('Upright Row');
+  });
+
+  it('prefers the trainer’s own exercises on a near tie', () => {
+    const plain = matchExercise('curl');
+    const withHistory = matchExercise('curl', ['Hammer Curl']);
+    expect(plain.best?.name).not.toBe('Hammer Curl');
+    expect([withHistory.best?.name, ...withHistory.alternatives.map((a) => a.name)]).toContain('Hammer Curl');
+  });
+
+  it('remembers a correction and gets it right the next time', () => {
+    const corrections = new Map([[correctionKey('lap top pull'), 'Lat Pulldown']]);
+    const match = matchExercise('lap top pull', [], { corrections });
+    expect(match.best?.name).toBe('Lat Pulldown');
+    expect(match.confident).toBe(true);
+  });
+
+  it('picks the phone’s guess that names a known exercise', () => {
+    expect(bestTranscript(['bench rest', 'bench press', 'bench dress'])).toBe('bench press');
+    expect(bestTranscript(['squat', 'squad'])).toBe('squat');
+    expect(bestTranscript(['end workout', 'and work out'])).toBe('end workout');
   });
 });

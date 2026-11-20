@@ -47,6 +47,7 @@ function Routes() {
         <Stack.Screen name="exercise/[id]" options={{ title: 'Edit exercise' }} />
         <Stack.Screen name="analyse" options={{ title: 'Analyse', headerRight: menu }} />
         <Stack.Screen name="profile" options={{ title: 'Your profile' }} />
+        <Stack.Screen name="bar-weights" options={{ title: 'Bar weights' }} />
       </Stack.Protected>
       <Stack.Protected guard={user === null}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
@@ -75,11 +76,42 @@ function DatabaseUnavailable({ error, onRetry }: { error: Error; onRetry: () => 
   );
 }
 
+// When a browser page reloads, the closing page can hold the database for a moment longer. The app
+// then reloads once by itself before saying anything; only a second failure shows the message.
+const RETRY_KEY = 'shalev-gym:db-retry';
+let reloading = false;
+
+function reloadOnceInBrowser(): boolean {
+  if (process.env.EXPO_OS !== 'web') return false;
+  if (reloading) return true;
+  try {
+    if (window.sessionStorage.getItem(RETRY_KEY)) return false;
+    window.sessionStorage.setItem(RETRY_KEY, '1');
+  } catch {
+    return false;
+  }
+  reloading = true;
+  setTimeout(() => window.location.reload(), 800);
+  return true;
+}
+
+async function openDatabase(db: Parameters<typeof migrate>[0]) {
+  await migrate(db);
+  if (process.env.EXPO_OS === 'web') {
+    try {
+      window.sessionStorage.removeItem(RETRY_KEY);
+    } catch {
+      // Only the automatic retry is affected.
+    }
+  }
+}
+
 export default function RootLayout() {
   const [dbError, setDbError] = useState<Error | null>(null);
   const [attempt, setAttempt] = useState(0);
   // Called while the database component renders, so the state update waits a tick.
   const onDbError = useCallback((error: Error) => {
+    if (reloadOnceInBrowser()) return;
     setTimeout(() => setDbError(error), 0);
   }, []);
 
@@ -99,7 +131,7 @@ export default function RootLayout() {
           }}
         />
       ) : (
-        <SQLiteProvider databaseName={DATABASE_NAME} key={attempt} onError={onDbError} onInit={migrate}>
+        <SQLiteProvider databaseName={DATABASE_NAME} key={attempt} onError={onDbError} onInit={openDatabase}>
           <AuthProvider>
             <StatusBar style="auto" />
             <Routes />

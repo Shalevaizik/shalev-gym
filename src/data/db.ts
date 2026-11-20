@@ -73,6 +73,28 @@ const MIGRATIONS = [
   );
   CREATE INDEX body_weights_user ON body_weights (user_id, recorded_at DESC);
   `,
+  // Equipment and timed sets (requirements 14 and 17), and what the trainer corrected (15d).
+  // Exercises saved before this keep a null equipment and show their weights as before.
+  `
+  ALTER TABLE exercises ADD COLUMN equipment TEXT
+    CHECK (equipment IN ('barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight'));
+  ALTER TABLE exercises ADD COLUMN measure TEXT NOT NULL DEFAULT 'reps' CHECK (measure IN ('reps', 'time'));
+  ALTER TABLE exercises ADD COLUMN bar_kg REAL CHECK (bar_kg IS NULL OR bar_kg >= 0);
+  ALTER TABLE exercise_sets ADD COLUMN duration_s INTEGER CHECK (duration_s IS NULL OR duration_s > 0);
+  CREATE TABLE name_corrections (
+    user_id TEXT NOT NULL,
+    heard TEXT NOT NULL,
+    name TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, heard)
+  );
+  CREATE TABLE bar_weights (
+    user_id TEXT NOT NULL,
+    exercise TEXT NOT NULL,
+    bar_kg REAL NOT NULL CHECK (bar_kg >= 0),
+    PRIMARY KEY (user_id, exercise)
+  );
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

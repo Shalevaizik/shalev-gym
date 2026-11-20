@@ -4,6 +4,11 @@ import {
   deleteExercise,
   deleteLastSet,
   finishExercises,
+  getCorrections,
+  listBarWeights,
+  recentWeightsKg,
+  recordCorrection,
+  setBarWeight,
   getExercise,
   listExercises,
   logSets,
@@ -193,5 +198,79 @@ describe('exerciseRepo', () => {
     expect(await getWorkout(db, 'alice', 'w1')).toBeNull();
     expect(await db.getAllAsync('SELECT * FROM exercises')).toEqual([]);
     expect(await db.getAllAsync('SELECT * FROM exercise_sets')).toEqual([]);
+  });
+
+  describe('equipment and timed sets (requirements 14 and 17)', () => {
+    it('saves each exercise with its equipment, measure and bar weight', async () => {
+      const [bench] = await startExercise(db, 'alice', 'w1', [{ name: 'Bench Press', muscle: 'Chest' }], null, minutes(1), newId);
+      await say(bench, '20 kg 10', minutes(2));
+      await finishExercises(db, 'alice', 'w1', minutes(2));
+      const [curl] = await startExercise(db, 'alice', 'w1', [{ name: 'EZ Bar Curl', muscle: 'Biceps' }], null, minutes(3), newId);
+      await say(curl, '10 kg 10', minutes(4));
+      await finishExercises(db, 'alice', 'w1', minutes(4));
+      await startExercise(db, 'alice', 'w1', [{ name: 'Plank', muscle: 'Core' }], null, minutes(5), newId);
+
+      const all = await listExercises(db, 'alice', 'w1');
+      expect(all.map((e) => [e.name, e.equipment, e.measure, e.barKg])).toEqual([
+        ['Bench Press', 'barbell', 'reps', 20],
+        ['EZ Bar Curl', 'barbell', 'reps', 10],
+        ['Plank', 'bodyweight', 'time', null],
+      ]);
+    });
+
+    it('keeps the time of a timed set', async () => {
+      const [id] = await startExercise(db, 'alice', 'w1', [{ name: 'Plank', muscle: 'Core' }], null, minutes(1), newId);
+      await logSets(db, 'alice', id, [{ weight: null, unit: null, reps: null, toFailure: false, durationS: 60 }], null, minutes(3), newId);
+      const [plank] = await listExercises(db, 'alice', 'w1');
+      expect(plank.sets[0]).toMatchObject({ reps: null, durationS: 60 });
+    });
+
+    it('changes equipment when the trainer edits it', async () => {
+      const [id] = await startExercise(db, 'alice', 'w1', [{ name: 'Mystery Press', muscle: null }], null, minutes(1), newId);
+      await say(id, '20 kg 10', minutes(2));
+      const before = await getExercise(db, 'alice', id);
+      await updateExercise(
+        db,
+        'alice',
+        id,
+        { name: 'Mystery Press', technique: null, sets: before!.sets, kind: { equipment: 'barbell', measure: 'reps', barKg: 15 } },
+        newId,
+      );
+      expect(await getExercise(db, 'alice', id)).toMatchObject({ equipment: 'barbell', barKg: 15 });
+    });
+
+    it('uses the trainer’s own bar weight for an exercise', async () => {
+      await setBarWeight(db, 'alice', 'Bench Press', 25);
+      const [id] = await startExercise(db, 'alice', 'w1', [{ name: 'Bench Press', muscle: 'Chest' }], null, minutes(1), newId);
+      expect((await getExercise(db, 'alice', id))?.barKg).toBe(25);
+      expect(await listBarWeights(db, 'alice')).toEqual([{ name: 'Bench Press', barKg: 25, own: true }]);
+
+      await setBarWeight(db, 'alice', 'Bench Press', null);
+      expect((await getExercise(db, 'alice', id))?.barKg).toBe(20);
+      expect(await listBarWeights(db, 'alice')).toEqual([{ name: 'Bench Press', barKg: 20, own: false }]);
+    });
+  });
+
+  describe('catching misheard input (requirement 15)', () => {
+    it('remembers corrections per trainer', async () => {
+      await recordCorrection(db, 'alice', 'lap top pull', 'Lat Pulldown', minutes(1));
+      await recordCorrection(db, 'alice', 'bench press', 'Bench Press', minutes(1));
+      expect(await getCorrections(db, 'alice')).toEqual(new Map([['lap top pull', 'Lat Pulldown']]));
+      expect((await getCorrections(db, 'bob')).size).toBe(0);
+    });
+
+    it('finds the weights usually used on an exercise, in kg', async () => {
+      const [first] = await startExercise(db, 'alice', 'w1', [{ name: 'Bench Press', muscle: 'Chest' }], null, minutes(1), newId);
+      await say(first, '80 kg 10', minutes(2));
+      await say(first, '176 lb 8', minutes(4));
+      await finishExercises(db, 'alice', 'w1', minutes(5));
+      const [second] = await startExercise(db, 'alice', 'w1', [{ name: 'bench press', muscle: 'Chest' }], null, minutes(6), newId);
+      await say(second, '60 kg 10', minutes(7));
+
+      const kg = await recentWeightsKg(db, 'alice', 'Bench Press', second, 'barbell');
+      expect(await recentWeightsKg(db, 'alice', 'Bench Press', second, null)).toEqual([]);
+      expect(kg.map(Math.round)).toEqual([80, 80]);
+      expect(await recentWeightsKg(db, 'bob', 'Bench Press', null)).toEqual([]);
+    });
   });
 });

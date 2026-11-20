@@ -40,7 +40,7 @@ export function AppMenu() {
     }
   }
 
-  function goTo(path: '/profile') {
+  function goTo(path: '/profile' | '/bar-weights') {
     setOpen(false);
     router.push(path);
   }
@@ -136,11 +136,15 @@ export function AppMenu() {
 
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-            <View style={styles.settingRow}>
-              <Ionicons color={theme.textMuted} name="barbell-outline" size={22} />
-              <Text style={[styles.settingLabel, { color: theme.textMuted }]}>Bar weights</Text>
-              <Text style={[styles.small, { color: theme.textMuted }]}>Coming soon</Text>
-            </View>
+            <Pressable
+              accessibilityLabel="Bar weights"
+              accessibilityRole="button"
+              onPress={() => goTo('/bar-weights')}
+              style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}>
+              <Ionicons color={theme.accent} name="barbell-outline" size={22} />
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Bar weights</Text>
+              <Ionicons color={theme.textMuted} name="chevron-forward" size={20} />
+            </Pressable>
 
             {accountsEnabled && (
               <>

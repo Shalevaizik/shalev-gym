@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { NewExercise } from '@/data/exerciseRepo';
 import type { ChosenPart } from '@/domain/exerciseChoice';
-import { formatSet } from '@/domain/exerciseLog';
+import { EQUIPMENT_LABEL, formatSetFor, kindFor } from '@/domain/equipment';
 
 import { Button } from './Button';
 import { haptic } from './haptics';
@@ -19,7 +19,7 @@ function optionsFor(part: ChosenPart): Option[] {
       key: o.name.toLowerCase(),
       name: o.name,
       muscle: o.muscle,
-      note: o.muscle ?? 'Used before',
+      note: [o.muscle ?? 'Used before', EQUIPMENT_LABEL[kindFor(o.name).equipment]].join(' · '),
     }));
   const spokenKey = part.spokenName.toLowerCase();
   // When the match is clear, what was said is just a mishearing of it, not a new exercise.
@@ -115,7 +115,7 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
 
       <Text style={[styles.heard, { color: theme.textMuted }]}>
         You said “{parts.map((p) => p.match.heard || p.spokenName.toLowerCase()).join(' + ')}”
-        {firstSets.length > 0 ? `, and the first set: ${firstSets.map(formatSet).join(', ')}` : ''}
+        {firstSets.length > 0 ? `, and the first set: ${firstSets.map((s) => formatSetFor(s, kindFor(chosen[0].name))).join(', ')}` : ''}
       </Text>
 
       <Button

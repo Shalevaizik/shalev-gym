@@ -1,5 +1,7 @@
+import { DEFAULT_BAR_KG, kindFor, type Equipment, type ExerciseKind, type Measure } from '../domain/equipment';
 import {
   estimateSetTimes,
+  toKg,
   type LoggedExercise,
   type LoggedSet,
   type ParsedSet,
@@ -19,6 +21,9 @@ type ExerciseRow = {
   muscle: string | null;
   created_at: string;
   finished_at: string | null;
+  equipment: Equipment | null;
+  measure: Measure;
+  bar_kg: number | null;
 };
 
 type SetRow = {
@@ -30,6 +35,7 @@ type SetRow = {
   to_failure: number;
   started_at: string | null;
   ended_at: string | null;
+  duration_s: number | null;
 };
 
 const toSet = (row: SetRow): LoggedSet => ({
@@ -38,6 +44,7 @@ const toSet = (row: SetRow): LoggedSet => ({
   unit: row.unit,
   reps: row.reps,
   toFailure: row.to_failure === 1,
+  ...(row.duration_s !== null && { durationS: row.duration_s }),
   startedAt: row.started_at,
   endedAt: row.ended_at,
 });
@@ -59,6 +66,9 @@ function assemble(exercises: ExerciseRow[], sets: SetRow[]): LoggedExercise[] {
     muscle: row.muscle,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
+    equipment: row.equipment,
+    measure: row.measure,
+    barKg: row.bar_kg,
     sets: byExercise.get(row.id) ?? [],
   }));
 }
@@ -120,8 +130,8 @@ async function insertSet(
 ) {
   await db.runAsync(
     `INSERT INTO exercise_sets
-       (id, exercise_id, user_id, position, weight, unit, reps, to_failure, started_at, ended_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, exercise_id, user_id, position, weight, unit, reps, to_failure, started_at, ended_at, duration_s)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       exerciseId,
@@ -133,6 +143,7 @@ async function insertSet(
       set.toFailure ? 1 : 0,
       times.startedAt,
       times.endedAt,
+      set.durationS ? Math.round(set.durationS) : null,
     ],
   );
 }
@@ -165,7 +176,8 @@ async function closeOpenExercises(db: Db, workoutId: string, at: Date) {
   ]);
 }
 
-export type NewExercise = { name: string; muscle: string | null };
+// Equipment and measure come from the exercise's name (see kindFor) unless given.
+export type NewExercise = { name: string; muscle: string | null; kind?: ExerciseKind };
 
 // Starts the exercise the trainer confirmed, or two or more done as a superset. The ones in
 // progress are finished first. Returns the new exercises' ids, in order.
@@ -192,11 +204,34 @@ export async function startExercise(
     const ids: string[] = [];
     for (const exercise of names) {
       const id = newId();
+      const kind = exercise.kind ?? kindFor(exercise.name);
+      // The trainer's own bar weight for this exercise (requirement 17a), else the usual one.
+      const ownBar =
+        kind.equipment === 'barbell'
+          ? await db.getFirstAsync<{ bar_kg: number }>(
+              'SELECT bar_kg FROM bar_weights WHERE user_id = ? AND exercise = ?',
+              [userId, exercise.name.toLowerCase()],
+            )
+          : null;
       await db.runAsync(
         `INSERT INTO exercises
-           (id, workout_id, user_id, position, name, technique, superset_group, spoken_text, muscle, created_at, finished_at)
-         VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)`,
-        [id, workoutId, userId, position++, exercise.name, supersetGroup, spokenText, exercise.muscle, at.toISOString()],
+           (id, workout_id, user_id, position, name, technique, superset_group, spoken_text, muscle, created_at,
+            finished_at, equipment, measure, bar_kg)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+        [
+          id,
+          workoutId,
+          userId,
+          position++,
+          exercise.name,
+          supersetGroup,
+          spokenText,
+          exercise.muscle,
+          at.toISOString(),
+          kind.equipment,
+          kind.measure,
+          kind.equipment === 'barbell' ? (ownBar?.bar_kg ?? kind.barKg ?? DEFAULT_BAR_KG) : null,
+        ],
       );
       ids.push(id);
     }
@@ -319,6 +354,8 @@ export type ExerciseEdit = {
   name: string;
   technique: Technique | null;
   sets: (ParsedSet & { id?: string })[];
+  // Left out to keep what the exercise has.
+  kind?: ExerciseKind;
 };
 
 // Replaces an exercise's name and sets with the edited version. Sets that were kept keep their
@@ -341,6 +378,14 @@ export async function updateExercise(
       edit.technique,
       exerciseId,
     ]);
+    if (edit.kind) {
+      await db.runAsync('UPDATE exercises SET equipment = ?, measure = ?, bar_kg = ? WHERE id = ?', [
+        edit.kind.equipment,
+        edit.kind.measure,
+        edit.kind.equipment === 'barbell' ? (edit.kind.barKg ?? DEFAULT_BAR_KG) : null,
+        exerciseId,
+      ]);
+    }
 
     const kept = new Map(existing.sets.map((set) => [set.id, set]));
     await db.runAsync('DELETE FROM exercise_sets WHERE exercise_id = ?', [exerciseId]);
@@ -364,4 +409,89 @@ export async function deleteExercise(db: Db, userId: string, exerciseId: string)
     await db.runAsync('DELETE FROM exercise_sets WHERE exercise_id = ?', [exerciseId]);
     await db.runAsync('DELETE FROM exercises WHERE id = ?', [exerciseId]);
   });
+}
+
+// The weights recently said for an exercise, in kg, newest first: how heavy the trainer usually
+// goes, to catch a misheard number (requirement 15e).
+export async function recentWeightsKg(
+  db: Db,
+  userId: string,
+  name: string,
+  excludeExerciseId: string | null,
+  // Weights only compare within one equipment type: "20" per side is not "20" on the machine.
+  equipment: Equipment | null = null,
+  limit = 12,
+): Promise<number[]> {
+  const rows = await db.getAllAsync<{ weight: number; unit: WeightUnit }>(
+    `SELECT s.weight, s.unit FROM exercise_sets s JOIN exercises e ON e.id = s.exercise_id
+     WHERE e.user_id = ? AND lower(e.name) = lower(?) AND e.id IS NOT ? AND e.equipment IS ?
+       AND s.weight IS NOT NULL AND s.unit IS NOT NULL
+     ORDER BY s.ended_at DESC LIMIT ?`,
+    [userId, name, excludeExerciseId, equipment, limit],
+  );
+  return rows.map((row) => toKg(row.weight, row.unit));
+}
+
+// ---------------------------------------------------------------------------
+// Corrections the trainer made to what the app heard (requirement 15d)
+
+export async function getCorrections(db: Db, userId: string): Promise<Map<string, string>> {
+  const rows = await db.getAllAsync<{ heard: string; name: string }>(
+    'SELECT heard, name FROM name_corrections WHERE user_id = ?',
+    [userId],
+  );
+  return new Map(rows.map((row) => [row.heard, row.name]));
+}
+
+export async function recordCorrection(db: Db, userId: string, heard: string, name: string, at: Date): Promise<void> {
+  const key = heard.trim().toLowerCase();
+  if (!key || key === name.trim().toLowerCase()) return;
+  await db.runAsync(
+    `INSERT INTO name_corrections (user_id, heard, name, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT (user_id, heard) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at`,
+    [userId, key, name.trim(), at.toISOString()],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bar weights per exercise (requirement 17a), set in the menu
+
+export type BarWeight = { name: string; barKg: number; own: boolean };
+
+// The barbell exercises this trainer has done, with the bar weight each one uses.
+export async function listBarWeights(db: Db, userId: string): Promise<BarWeight[]> {
+  const done = await db.getAllAsync<{ name: string }>(
+    `SELECT name FROM exercises WHERE user_id = ? AND equipment = 'barbell'
+     GROUP BY lower(name) ORDER BY lower(name)`,
+    [userId],
+  );
+  const own = await db.getAllAsync<{ exercise: string; bar_kg: number }>(
+    'SELECT exercise, bar_kg FROM bar_weights WHERE user_id = ?',
+    [userId],
+  );
+  const set = new Map(own.map((row) => [row.exercise, row.bar_kg]));
+  return done.map(({ name }) => {
+    const mine = set.get(name.toLowerCase());
+    return { name, barKg: mine ?? kindFor(name).barKg ?? DEFAULT_BAR_KG, own: mine !== undefined };
+  });
+}
+
+// Sets the bar weight for an exercise from now on, and for its exercise in a workout in progress.
+// Null goes back to the usual bar.
+export async function setBarWeight(db: Db, userId: string, name: string, barKg: number | null): Promise<void> {
+  const key = name.trim().toLowerCase();
+  if (barKg === null) {
+    await db.runAsync('DELETE FROM bar_weights WHERE user_id = ? AND exercise = ?', [userId, key]);
+  } else {
+    await db.runAsync(
+      `INSERT INTO bar_weights (user_id, exercise, bar_kg) VALUES (?, ?, ?)
+       ON CONFLICT (user_id, exercise) DO UPDATE SET bar_kg = excluded.bar_kg`,
+      [userId, key, barKg],
+    );
+  }
+  await db.runAsync(
+    `UPDATE exercises SET bar_kg = ? WHERE user_id = ? AND lower(name) = ? AND equipment = 'barbell'
+       AND workout_id IN (SELECT id FROM workouts WHERE ended_at IS NULL)`,
+    [barKg ?? kindFor(name).barKg ?? DEFAULT_BAR_KG, userId, key],
+  );
 }

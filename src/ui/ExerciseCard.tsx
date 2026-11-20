@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatSet, type LoggedExercise } from '@/domain/exerciseLog';
+import { EQUIPMENT_LABEL, formatSetFor } from '@/domain/equipment';
+import { kindOf, type LoggedExercise } from '@/domain/exerciseLog';
 import { formatTime } from '@/domain/workout';
 
 import { useTheme } from './theme';
@@ -19,6 +20,7 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
   const count = exercise.sets.length;
   const tags = [
     exercise.muscle,
+    exercise.equipment && EQUIPMENT_LABEL[exercise.equipment],
     inSuperset && 'Superset',
     exercise.technique && capitalize(exercise.technique),
   ].filter(Boolean) as string[];
@@ -59,7 +61,7 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
       {exercise.sets.map((set, index) => (
         <View key={set.id} style={[styles.setRow, { borderTopColor: theme.border }]}>
           <Text style={[styles.setNumber, { color: theme.textMuted }]}>{index + 1}</Text>
-          <Text style={[styles.setText, { color: theme.text }]}>{formatSet(set)}</Text>
+          <Text style={[styles.setText, { color: theme.text }]}>{formatSetFor(set, kindOf(exercise))}</Text>
           {set.endedAt && (
             <Text
               accessibilityLabel={`About ${formatTime(set.endedAt)}`}

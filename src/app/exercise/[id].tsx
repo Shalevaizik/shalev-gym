@@ -17,7 +17,13 @@ import {
 import { useAuth } from '@/auth/AuthProvider';
 import { deleteExercise, getExercise, updateExercise } from '@/data/exerciseRepo';
 import {
-  formatWeight,
+  DEFAULT_BAR_KG,
+  EQUIPMENT_LABEL,
+  formatSetFor,
+  type Equipment,
+  type Measure,
+} from '@/domain/equipment';
+import {
   type LoggedExercise,
   type Technique,
   type WeightUnit,
@@ -31,7 +37,20 @@ type DraftSet = {
   weight: string;
   unit: WeightUnit;
   reps: string;
+  duration: string;
   toFailure: boolean;
+};
+
+const EQUIPMENT_ORDER: Equipment[] = ['barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight'];
+
+// What the weight field means for each equipment type (requirement 17).
+const WEIGHT_LABEL: Record<Equipment, string> = {
+  barbell: 'Weight per side',
+  dumbbells: 'One dumbbell',
+  dumbbell: 'Dumbbell',
+  machine: 'Weight',
+  plates: 'Weight per side',
+  bodyweight: 'Added weight',
 };
 
 const TECHNIQUES: { value: Technique | null; label: string }[] = [
@@ -48,6 +67,7 @@ function toDraft(exercise: LoggedExercise): DraftSet[] {
     weight: set.weight === null ? '' : String(set.weight),
     unit: set.unit ?? fallbackUnit,
     reps: set.reps === null ? '' : String(set.reps),
+    duration: set.durationS == null ? '' : String(set.durationS),
     toFailure: set.toFailure,
   }));
 }
@@ -74,6 +94,9 @@ export default function EditExerciseScreen() {
   const [name, setName] = useState('');
   const [technique, setTechnique] = useState<Technique | null>(null);
   const [sets, setSets] = useState<DraftSet[]>([]);
+  const [equipment, setEquipment] = useState<Equipment | null>(null);
+  const [measure, setMeasure] = useState<Measure>('reps');
+  const [bar, setBar] = useState(String(DEFAULT_BAR_KG));
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +113,9 @@ export default function EditExerciseScreen() {
           setName(loaded.name);
           setTechnique(loaded.technique);
           setSets(toDraft(loaded));
+          setEquipment(loaded.equipment);
+          setMeasure(loaded.measure);
+          setBar(String(loaded.barKg ?? DEFAULT_BAR_KG));
         }
       })
       .catch(() => {
@@ -114,6 +140,7 @@ export default function EditExerciseScreen() {
           weight: last?.weight ?? '',
           unit: last?.unit ?? 'kg',
           reps: last?.reps ?? '',
+          duration: last?.duration ?? '',
           toFailure: false,
         },
       ];
@@ -143,18 +170,32 @@ export default function EditExerciseScreen() {
         setError(`Set ${index + 1}: reps must be a whole number.`);
         return;
       }
+      const duration = readReps(set.duration);
+      if (measure === 'time' && (duration === 'invalid' || duration === null || duration === 0)) {
+        setError(`Set ${index + 1}: enter the time in seconds.`);
+        return;
+      }
       parsed.push({
         id: set.id,
         weight,
         unit: weight === null ? null : set.unit,
-        reps,
+        reps: measure === 'time' ? null : reps,
         toFailure: set.toFailure,
+        ...(measure === 'time' && typeof duration === 'number' && { durationS: duration }),
       });
     }
+    const barKg = readWeight(bar);
+    if (equipment === 'barbell' && (barKg === 'invalid' || barKg === null)) {
+      setError('Enter the bar’s weight in kg, for example 20.');
+      return;
+    }
+    const kind = equipment
+      ? { equipment, measure, barKg: equipment === 'barbell' && typeof barKg === 'number' ? barKg : null }
+      : undefined;
 
     setSaving(true);
     try {
-      await updateExercise(db, userId, id, { name, technique, sets: parsed }, randomUUID);
+      await updateExercise(db, userId, id, { name, technique, sets: parsed, kind }, randomUUID);
       router.back();
     } catch {
       setError('The changes could not be saved. Please try again.');
@@ -194,6 +235,21 @@ export default function EditExerciseScreen() {
     );
   }
 
+  const preview = (set: DraftSet, weight: number | null) => {
+    const reps = readReps(set.reps);
+    const seconds = Number(set.duration);
+    return formatSetFor(
+      {
+        weight,
+        unit: weight === null ? null : set.unit,
+        reps: measure === 'time' || reps === 'invalid' ? null : reps,
+        toFailure: false,
+        ...(measure === 'time' && seconds > 0 && { durationS: seconds }),
+      },
+      equipment ? { equipment, measure, barKg: Number(bar.replace(',', '.')) || DEFAULT_BAR_KG } : null,
+    );
+  };
+
   const inputStyle = [
     styles.input,
     { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface },
@@ -219,6 +275,43 @@ export default function EditExerciseScreen() {
               You said: “{exercise.spokenText}”
             </Text>
           )}
+
+          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Equipment</Text>
+          <View style={styles.chips}>
+            {EQUIPMENT_ORDER.map((option) => (
+              <Chip
+                key={option}
+                label={EQUIPMENT_LABEL[option]}
+                onPress={() => setEquipment(option)}
+                selected={equipment === option}
+                theme={theme}
+              />
+            ))}
+          </View>
+          {equipment === null && (
+            <Text style={[styles.heard, { color: theme.textMuted }]}>
+              Saved before equipment types existed. Pick one to show its weights the new way.
+            </Text>
+          )}
+          {equipment === 'barbell' && (
+            <View style={styles.barRow}>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Bar weight (kg)</Text>
+              <TextInput
+                accessibilityLabel="Bar weight in kg"
+                inputMode="decimal"
+                keyboardType="decimal-pad"
+                onChangeText={setBar}
+                style={[inputStyle, styles.barInput]}
+                value={bar}
+              />
+            </View>
+          )}
+
+          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Measured in</Text>
+          <View style={styles.chips}>
+            <Chip label="Reps" onPress={() => setMeasure('reps')} selected={measure === 'reps'} theme={theme} />
+            <Chip label="Time" onPress={() => setMeasure('time')} selected={measure === 'time'} theme={theme} />
+          </View>
 
           <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Type</Text>
           <View style={styles.chips}>
@@ -254,14 +347,16 @@ export default function EditExerciseScreen() {
 
                   <View style={styles.fields}>
                     <View style={styles.field}>
-                      <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Weight</Text>
+                      <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>
+                        {equipment ? WEIGHT_LABEL[equipment] : 'Weight'}
+                      </Text>
                       <TextInput
                         accessibilityLabel={`Set ${index + 1} weight`}
                         id={`set-${set.key}-weight`}
                         inputMode="decimal"
                         keyboardType="decimal-pad"
                         onChangeText={(text) => changeSet(set.key, { weight: text })}
-                        placeholder="Bodyweight"
+                        placeholder={equipment === 'barbell' ? 'Empty bar' : equipment === 'bodyweight' ? 'None' : equipment ? '' : 'Bodyweight'}
                         placeholderTextColor={theme.textMuted}
                         style={inputStyle}
                         value={set.weight}
@@ -278,18 +373,33 @@ export default function EditExerciseScreen() {
                         />
                       ))}
                     </View>
-                    <View style={styles.field}>
-                      <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Reps</Text>
-                      <TextInput
-                        accessibilityLabel={`Set ${index + 1} reps`}
-                        id={`set-${set.key}-reps`}
-                        inputMode="numeric"
-                        keyboardType="number-pad"
-                        onChangeText={(text) => changeSet(set.key, { reps: text })}
-                        style={inputStyle}
-                        value={set.reps}
-                      />
-                    </View>
+                    {measure === 'time' ? (
+                      <View style={styles.field}>
+                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Seconds</Text>
+                        <TextInput
+                          accessibilityLabel={`Set ${index + 1} seconds`}
+                          id={`set-${set.key}-seconds`}
+                          inputMode="numeric"
+                          keyboardType="number-pad"
+                          onChangeText={(text) => changeSet(set.key, { duration: text })}
+                          style={inputStyle}
+                          value={set.duration}
+                        />
+                      </View>
+                    ) : (
+                      <View style={styles.field}>
+                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Reps</Text>
+                        <TextInput
+                          accessibilityLabel={`Set ${index + 1} reps`}
+                          id={`set-${set.key}-reps`}
+                          inputMode="numeric"
+                          keyboardType="number-pad"
+                          onChangeText={(text) => changeSet(set.key, { reps: text })}
+                          style={inputStyle}
+                          value={set.reps}
+                        />
+                      </View>
+                    )}
                   </View>
 
                   <View style={styles.setFooter}>
@@ -299,9 +409,9 @@ export default function EditExerciseScreen() {
                       selected={set.toFailure}
                       theme={theme}
                     />
-                    {typeof weight === 'number' && (
+                    {weight !== 'invalid' && (
                       <Text style={[styles.converted, { color: theme.textMuted }]}>
-                        {formatWeight(weight, set.unit)}
+                        {preview(set, weight)}
                       </Text>
                     )}
                   </View>
@@ -406,6 +516,8 @@ const styles = StyleSheet.create({
   setFooter: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
   converted: { fontSize: 14, fontVariant: ['tabular-nums'] },
   addSet: { marginTop: 12 },
+  barRow: { marginTop: 12, gap: 4 },
+  barInput: { maxWidth: 140 },
   error: { fontSize: 15, marginTop: 16 },
   actions: { marginTop: 24, gap: 10 },
   confirmText: { fontSize: 17, fontWeight: '600', textAlign: 'center' },

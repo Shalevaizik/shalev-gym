@@ -24,7 +24,8 @@ const NEXT_EXERCISE =
 const UNDO = /^(undo|delete|remove|scratch|cancel)( (that|it|the last|last|the|this))?( set)?( please)?$/;
 const REPEAT = /^((the )?same( (again|set|thing|as (before|last( time)?)))?|again|one more( (the )?same)?|repeat( (that|the last|last)( set)?)?|another( one| set)?( the same)?)( please)?$/;
 
-export function parseSetLog(text: string, previous: ParsedSet | null): SetCommand {
+export function parseSetLog(text: string, previous: ParsedSet | null, measure: 'reps' | 'time' = 'reps'): SetCommand {
+  const timed = measure === 'time';
   const plain = text.toLowerCase().replace(/[^a-z'\s]/g, ' ').replace(/\s+/g, ' ').trim();
   const hasDigits = /\d/.test(text);
   if (!hasDigits) {
@@ -44,13 +45,17 @@ export function parseSetLog(text: string, previous: ParsedSet | null): SetComman
   // In a set, "for" joins weight and reps: "80 for 10".
   const tokens = tokenize(text.replace(/\bfor\b/gi, ' x '));
   const defaultUnit: WeightUnit = previous?.unit ?? 'kg';
-  const reading = readSets(setTokens(tokens), 'set', defaultUnit);
+  const reading = readSets(setTokens(tokens), timed ? 'time' : 'set', defaultUnit);
 
   if (reading.weightOnly) {
-    return { kind: 'not-understood', reason: `I heard the weight but not the reps. Try "${text.trim()} 10 reps".` };
+    return timed
+      ? { kind: 'not-understood', reason: `I heard the weight but not the time. Try "${text.trim()} 60 seconds".` }
+      : { kind: 'not-understood', reason: `I heard the weight but not the reps. Try "${text.trim()} 10 reps".` };
   }
   if (reading.sets.length === 0) {
-    return { kind: 'not-understood', reason: 'I didn’t catch the weight and reps. Try “80 kg 10 reps”.' };
+    return timed
+      ? { kind: 'not-understood', reason: 'I didn’t catch the time. Try “60 seconds” or “1:30”.' }
+      : { kind: 'not-understood', reason: 'I didn’t catch the weight and reps. Try “80 kg 10 reps”.' };
   }
 
   // "10 reps" with nothing about weight keeps the weight of the last set.

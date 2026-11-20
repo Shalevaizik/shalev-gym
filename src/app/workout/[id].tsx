@@ -19,18 +19,24 @@ import { useAuth } from '@/auth/AuthProvider';
 import {
   deleteLastSet,
   finishExercises,
+  getCorrections,
   listExercises,
   logSets,
   recentExerciseNames,
+  recentWeightsKg,
+  recordCorrection,
   resumeExercise,
   startExercise,
   type NewExercise,
 } from '@/data/exerciseRepo';
+import { EQUIPMENT_HINT, EQUIPMENT_LABEL, formatSetFor, shortSetFor } from '@/domain/equipment';
+import { checkWeight, typicalKg, type WeightDoubt } from '@/domain/weightCheck';
 import { deleteWorkout, endWorkout, getWorkout, renameWorkout } from '@/data/workoutRepo';
-import { muscleOf, searchExercises } from '@/domain/exerciseCatalog';
-import { parseExerciseChoice, type ChosenPart } from '@/domain/exerciseChoice';
+import { correctionKey, muscleOf, searchExercises, type MatchContext } from '@/domain/exerciseCatalog';
+import { bestTranscript, parseExerciseChoice, type ChosenPart } from '@/domain/exerciseChoice';
 import {
-  formatSet,
+  kindOf,
+  toKg,
   type LoggedExercise,
   type LoggedSet,
   type ParsedSet,
@@ -62,6 +68,8 @@ function goHome() {
 
 type Notice = { tone: 'success' | 'info' | 'error'; text: string };
 type Pending = { parts: ChosenPart[]; superset: boolean; spokenText: string; at: Date };
+// Sets held back because a weight looked misheard (requirement 15e), until the trainer confirms.
+type Doubt = { exercise: LoggedExercise; sets: ParsedSet[]; technique: Technique | null; at: Date; doubt: WeightDoubt };
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -94,6 +102,9 @@ export default function WorkoutScreen() {
   const [typed, setTyped] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [corrections, setCorrections] = useState<Map<string, string>>(new Map());
+  const [usual, setUsual] = useState<{ exerciseId: string; kg: number | null } | null>(null);
+  const [doubt, setDoubt] = useState<Doubt | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const userId = user?.id;
@@ -106,6 +117,32 @@ export default function WorkoutScreen() {
   const done = exercises.filter((e) => !active.includes(e));
   const target: LoggedExercise | null = active[Math.min(targetIndex, active.length - 1)] ?? null;
   const mode: 'choose' | 'confirm' | 'sets' = pending ? 'confirm' : target ? 'sets' : 'choose';
+
+  // What this workout is about so far and what the trainer corrected before, for telling
+  // close-sounding exercises apart (requirement 15c and d).
+  const context = useMemo<MatchContext>(
+    () => ({
+      focus: exercises.map((e) => e.muscle ?? muscleOf(e.name)).filter((m): m is NonNullable<typeof m> => m !== null),
+      corrections,
+    }),
+    [exercises, corrections],
+  );
+
+  // How heavy the trainer usually goes on the exercise in progress, to catch misheard weights.
+  const targetId = target?.id ?? null;
+  const targetName = target?.name ?? null;
+  const targetEquipment = target?.equipment ?? null;
+  useEffect(() => {
+    if (!userId || !targetId || !targetName) return;
+    let cancelled = false;
+    recentWeightsKg(db, userId, targetName, targetId, targetEquipment)
+      .then((kg) => !cancelled && setUsual({ exerciseId: targetId, kg: typicalKg(kg) }))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [db, userId, targetId, targetName, targetEquipment]);
+  const usualKg = usual?.exerciseId === targetId ? usual.kg : null;
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -121,12 +158,18 @@ export default function WorkoutScreen() {
     useCallback(() => {
       if (!userId) return;
       let cancelled = false;
-      Promise.all([getWorkout(db, userId, id), listExercises(db, userId, id), recentExerciseNames(db, userId)])
-        .then(([loadedWorkout, loaded, names]) => {
+      Promise.all([
+        getWorkout(db, userId, id),
+        listExercises(db, userId, id),
+        recentExerciseNames(db, userId),
+        getCorrections(db, userId),
+      ])
+        .then(([loadedWorkout, loaded, names, fixes]) => {
           if (cancelled) return;
           setWorkout(loadedWorkout);
           setExercises(loaded);
           setHistory(names);
+          setCorrections(fixes);
         })
         .catch(() => {
           if (!cancelled) setError('This workout could not be loaded.');
@@ -152,8 +195,10 @@ export default function WorkoutScreen() {
   // --- Choosing the exercise -------------------------------------------------------------
 
   const readChoice = useCallback(
-    (text: string, at: Date, fromVoice: boolean) => {
-      const result = parseExerciseChoice(text, history);
+    (heardText: string, at: Date, fromVoice: boolean, versions: string[] = [heardText]) => {
+      // Of the versions the phone heard, use the one that best names an exercise.
+      const text = versions.length > 1 ? bestTranscript(versions, history, context) : heardText;
+      const result = parseExerciseChoice(text, history, context);
       if (result.kind === 'end-workout') {
         setNotice(null);
         setConfirmingEnd(true);
@@ -169,8 +214,25 @@ export default function WorkoutScreen() {
       setTyped('');
       setPending({ parts: result.parts, superset: result.superset, spokenText: text, at });
     },
-    [history, say],
+    [history, context, say],
   );
+
+  // When the trainer picks something other than what the app was sure of, or settles a doubt,
+  // remember it so the same words are understood next time (requirement 15d).
+  async function rememberChoices(chosen: NewExercise[], from: Pending) {
+    if (!userId) return;
+    const learned = new Map(corrections);
+    for (const [index, part] of from.parts.entries()) {
+      const name = chosen[index]?.name;
+      if (!name) continue;
+      const sure = part.match.confident && part.match.best?.name === name;
+      const heard = correctionKey(part.match.heard || part.spokenName);
+      if (sure || !heard || heard === name.toLowerCase()) continue;
+      await recordCorrection(db, userId, heard, name, new Date());
+      learned.set(heard, name);
+    }
+    setCorrections(learned);
+  }
 
   async function begin(chosen: NewExercise[], from: Pending | null) {
     if (!userId) return;
@@ -178,6 +240,7 @@ export default function WorkoutScreen() {
     try {
       const at = new Date();
       const ids = await startExercise(db, userId, id, chosen, from?.spokenText ?? null, at, randomUUID);
+      if (from) await rememberChoices(chosen, from).catch(() => undefined);
       // A first set said with the name ("bench press 80 kg 10") is logged right away.
       let logged = 0;
       for (const [index, part] of (from?.parts ?? []).entries()) {
@@ -206,17 +269,20 @@ export default function WorkoutScreen() {
   async function addSets(exercise: LoggedExercise, sets: ParsedSet[], technique: Technique | null, at: Date) {
     if (!userId) return;
     setSaving(true);
+    // Cleared now, not after saving, so the next set can be typed straight away without being wiped.
+    const submitted = typed;
+    setTyped('');
     try {
       await logSets(db, userId, exercise.id, sets, technique, at, randomUUID);
       await refresh();
-      setTyped('');
       const number = exercise.sets.length + sets.length;
-      const what = sets.length === 1 ? formatSet(sets[0]) : `${plural(sets.length, 'set')}`;
+      const what = sets.length === 1 ? formatSetFor(sets[0], kindOf(exercise)) : `${plural(sets.length, 'set')}`;
       const label = sets.length === 1 ? `Set ${number}` : 'Logged';
       say({ tone: 'success', text: `${label}: ${what}${active.length > 1 ? ` · ${exercise.name}` : ''}` });
       if (active.length > 1) setTargetIndex((active.indexOf(exercise) + 1) % active.length);
     } catch {
       say({ tone: 'error', text: 'The set could not be saved. Please try again.' });
+      setTyped((current) => current || submitted);
     } finally {
       setSaving(false);
     }
@@ -276,13 +342,34 @@ export default function WorkoutScreen() {
     }
   }
 
-  const readSet = (text: string, at: Date, fromVoice: boolean) => {
+  const readSet = (heardText: string, at: Date, fromVoice: boolean, versions: string[] = [heardText]) => {
     if (!target) return;
     const previous = target.sets.at(-1) ?? null;
-    const command = parseSetLog(text, previous);
+    // The first version the phone heard that makes sense as a set (requirement 15b).
+    let text = heardText;
+    let command = parseSetLog(text, previous, target.measure);
+    for (const version of versions.slice(1)) {
+      if (command.kind !== 'not-understood') break;
+      const other = parseSetLog(version, previous, target.measure);
+      if (other.kind !== 'not-understood') {
+        text = version;
+        command = other;
+      }
+    }
     switch (command.kind) {
-      case 'sets':
+      case 'sets': {
+        // A weight far from this exercise's usual one was probably misheard: ask first.
+        const reference =
+          previous?.weight != null && previous.unit ? toKg(previous.weight, previous.unit) : usualKg;
+        const found = command.sets.map((set) => checkWeight(set, reference)).find((d) => d !== null);
+        if (found) {
+          haptic.warning();
+          setNotice(null);
+          setDoubt({ exercise: target, sets: command.sets, technique: command.technique, at, doubt: found });
+          return;
+        }
         return addSets(target, command.sets, command.technique, at);
+      }
       case 'repeat':
         return previous && addSets(target, [previous], null, at);
       case 'undo':
@@ -296,7 +383,7 @@ export default function WorkoutScreen() {
       case 'not-understood': {
         // Saying another exercise's name moves on to it, after the usual confirmation.
         if (!/\d/.test(text)) {
-          const choice = parseExerciseChoice(text, history);
+          const choice = parseExerciseChoice(text, history, context);
           if (choice.kind === 'choice' && choice.parts.some((p) => p.match.confident)) {
             haptic.select();
             setTyped('');
@@ -313,12 +400,12 @@ export default function WorkoutScreen() {
 
   // --- Voice and typing ------------------------------------------------------------------
 
-  const route = (text: string, at: Date, fromVoice: boolean) => {
-    if (mode === 'sets') readSet(text, at, fromVoice);
-    else readChoice(text, at, fromVoice);
+  const route = (text: string, at: Date, fromVoice: boolean, versions?: string[]) => {
+    if (mode === 'sets') readSet(text, at, fromVoice, versions);
+    else readChoice(text, at, fromVoice, versions);
   };
 
-  const speech = useSpeechToText((text, tappedAt) => route(text, tappedAt, true), history);
+  const speech = useSpeechToText((text, tappedAt, versions) => route(text, tappedAt, true, versions), history);
 
   useFocusEffect(
     useCallback(() => {
@@ -483,7 +570,8 @@ export default function WorkoutScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
       <ScrollView
         contentContainerStyle={styles.content}
-        keyboardDismissMode="on-drag"
+        // In a browser, scrolling a field into view counts as a drag and would take its focus away.
+        keyboardDismissMode={Platform.OS === 'web' ? 'none' : 'on-drag'}
         keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
           {!inProgress &&
@@ -684,20 +772,71 @@ export default function WorkoutScreen() {
               />
               {transcript || (
                 <Text style={[styles.hint, { color: theme.textMuted }]}>
-                  {target.sets.length === 0
-                    ? 'After your set, tap and say it, like “80 kg 10 reps”.'
-                    : 'Say “8 reps”, “same again”, “undo” or “next exercise”.'}
+                  {target.sets.length > 0
+                    ? target.measure === 'time'
+                      ? 'Say “45 seconds”, “same again”, “undo” or “next exercise”.'
+                      : 'Say “8 reps”, “same again”, “undo” or “next exercise”.'
+                    : target.measure === 'time'
+                      ? 'After your hold, tap and say the time, like “60 seconds” or “1:30”. Add weight with “plus 10 kg”.'
+                      : target.equipment
+                        ? `After your set, tap and say it. ${EQUIPMENT_HINT[target.equipment]}`
+                        : 'After your set, tap and say it, like “80 kg 10 reps”.'}
                 </Text>
+              )}
+              {doubt && doubt.exercise.id === target.id && (
+                <View
+                  accessibilityLiveRegion="polite"
+                  style={[styles.doubt, { borderColor: theme.accent, backgroundColor: theme.accentSoft }]}>
+                  <View style={styles.doubtTitleRow}>
+                    <Ionicons color={theme.accent} name="help-circle" size={22} />
+                    <Text style={[styles.doubtTitle, { color: theme.text }]}>
+                      Did you say {doubt.doubt.heard} {doubt.doubt.unit}?
+                    </Text>
+                  </View>
+                  <Text style={[styles.doubtText, { color: theme.textMuted }]}>
+                    That’s far from your usual weight on {doubt.exercise.name}. Did you mean {doubt.doubt.suggestion}{' '}
+                    {doubt.doubt.unit}?
+                  </Text>
+                  <Button
+                    label={`No, ${doubt.doubt.suggestion} ${doubt.doubt.unit}`}
+                    onPress={() => {
+                      const { exercise, sets, technique, at, doubt: d } = doubt;
+                      setDoubt(null);
+                      addSets(
+                        exercise,
+                        sets.map((s) => (s.weight === d.heard && s.unit === d.unit ? { ...s, weight: d.suggestion } : s)),
+                        technique,
+                        at,
+                      );
+                    }}
+                  />
+                  <View style={styles.doubtActions}>
+                    <View style={styles.flex}>
+                      <Button
+                        label={`Yes, ${doubt.doubt.heard} ${doubt.doubt.unit}`}
+                        onPress={() => {
+                          const { exercise, sets, technique, at } = doubt;
+                          setDoubt(null);
+                          addSets(exercise, sets, technique, at);
+                        }}
+                        variant="secondary"
+                      />
+                    </View>
+                    <View style={styles.flex}>
+                      <Button label="Cancel" onPress={() => setDoubt(null)} variant="secondary" />
+                    </View>
+                  </View>
+                </View>
               )}
               {noticeView}
 
               <View style={styles.chips}>
                 {previous && (
                   <Chip
-                    accessibilityLabel={`Log the same set again: ${formatSet(previous)}`}
+                    accessibilityLabel={`Log the same set again: ${formatSetFor(previous, kindOf(target))}`}
                     disabled={saving || speech.listening}
                     icon="repeat"
-                    label={`Same again · ${shortSet(previous)}`}
+                    label={`Same again · ${shortSetFor(previous, kindOf(target))}`}
                     onPress={() => addSets(target, [previous], null, new Date())}
                   />
                 )}
@@ -711,7 +850,7 @@ export default function WorkoutScreen() {
                 )}
               </View>
 
-              {typeRow('Or type the set, e.g. 80 kg 10', 'Type a set')}
+              {typeRow(target.measure === 'time' ? 'Or type the time, e.g. 60 s' : 'Or type the set, e.g. 80 kg 10', 'Type a set')}
 
               <Button
                 disabled={saving || speech.listening}
@@ -820,12 +959,6 @@ export default function WorkoutScreen() {
   );
 }
 
-// "80 kg × 10" without the converted weight, to fit on a chip.
-function shortSet(set: ParsedSet): string {
-  const weight = set.weight === null ? 'BW' : `${set.weight} ${set.unit}`;
-  return set.reps === null ? weight : `${weight} × ${set.reps}`;
-}
-
 function CurrentExercise({
   exercise,
   isTarget,
@@ -861,7 +994,15 @@ function CurrentExercise({
             <Text style={[styles.exerciseName, { color: theme.text }]}>{exercise.name}</Text>
           </View>
           <Text style={[styles.exerciseMeta, { color: theme.textMuted }]}>
-            {[exercise.muscle, plural(exercise.sets.length, 'set'), exercise.technique].filter(Boolean).join(' · ')}
+            {[
+              exercise.muscle,
+              exercise.equipment && EQUIPMENT_LABEL[exercise.equipment],
+              exercise.equipment === 'barbell' && exercise.barKg !== null && `${exercise.barKg} kg bar`,
+              plural(exercise.sets.length, 'set'),
+              exercise.technique,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         </Pressable>
         <Pressable
@@ -879,7 +1020,7 @@ function CurrentExercise({
           <View style={[styles.setBadge, { backgroundColor: theme.accentSoft }]}>
             <Text style={[styles.setBadgeText, { color: theme.accent }]}>{index + 1}</Text>
           </View>
-          <Text style={[styles.setText, { color: theme.text }]}>{formatSet(set)}</Text>
+          <Text style={[styles.setText, { color: theme.text }]}>{formatSetFor(set, kindOf(exercise))}</Text>
           {set.endedAt && <Text style={[styles.setTime, { color: theme.textMuted }]}>{formatTime(set.endedAt)}</Text>}
         </View>
       ))}
@@ -900,6 +1041,11 @@ const styles = StyleSheet.create({
   renameBox: { gap: 8, marginBottom: 12 },
   renameHint: { fontSize: 14 },
   renameActions: { flexDirection: 'row', gap: 10 },
+  doubt: { borderWidth: 1.5, borderRadius: 14, padding: 14, gap: 10 },
+  doubtTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  doubtTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
+  doubtText: { fontSize: 15, lineHeight: 21 },
+  doubtActions: { flexDirection: 'row', gap: 10 },
   date: { fontSize: 15 },
   times: { fontSize: 18, fontWeight: '700', marginTop: 2 },
   clock: { fontSize: 34, fontWeight: '700', fontVariant: ['tabular-nums'] },

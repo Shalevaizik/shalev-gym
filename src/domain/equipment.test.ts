@@ -1,0 +1,87 @@
+import { formatSetFor, kindFor, loadKg, shortSetFor, type ExerciseKind } from './equipment';
+import type { ParsedSet } from './exerciseLog';
+
+const set = (weight: number | null, unit: 'kg' | 'lb' | null, reps: number | null, durationS?: number): ParsedSet => ({
+  weight,
+  unit,
+  reps,
+  toFailure: false,
+  ...(durationS !== undefined && { durationS }),
+});
+const BARBELL: ExerciseKind = { equipment: 'barbell', measure: 'reps', barKg: 20 };
+const DUMBBELLS: ExerciseKind = { equipment: 'dumbbells', measure: 'reps', barKg: null };
+const BODYWEIGHT: ExerciseKind = { equipment: 'bodyweight', measure: 'reps', barKg: null };
+const PLANK: ExerciseKind = { equipment: 'bodyweight', measure: 'time', barKg: null };
+
+describe('kindFor', () => {
+  it('knows the catalog’s equipment, measure and bar weight', () => {
+    expect(kindFor('Bench Press')).toEqual(BARBELL);
+    expect(kindFor('EZ Bar Curl')).toEqual({ equipment: 'barbell', measure: 'reps', barKg: 10 });
+    expect(kindFor('Dumbbell Bench Press')).toEqual(DUMBBELLS);
+    expect(kindFor('Dumbbell Row').equipment).toBe('dumbbell');
+    expect(kindFor('Leg Press').equipment).toBe('plates');
+    expect(kindFor('Lat Pulldown').equipment).toBe('machine');
+    expect(kindFor('Pull-Up')).toEqual(BODYWEIGHT);
+    expect(kindFor('Plank')).toEqual(PLANK);
+  });
+
+  it('guesses custom exercises from their name', () => {
+    expect(kindFor('Incline Smith Press').equipment).toBe('barbell');
+    expect(kindFor('Seated Dumbbell Curl').equipment).toBe('dumbbells');
+    expect(kindFor('Single Arm Dumbbell Press').equipment).toBe('dumbbell');
+    expect(kindFor('Cable Woodchopper').equipment).toBe('machine');
+    expect(kindFor('Hollow Body Hold')).toEqual({ equipment: 'bodyweight', measure: 'time', barKg: null });
+    expect(kindFor('Something New').equipment).toBe('machine');
+  });
+});
+
+describe('formatSetFor', () => {
+  it('shows a barbell as weight per side with the total', () => {
+    expect(formatSetFor(set(20, 'kg', 10), BARBELL)).toBe('20 kg per side · 60 kg total × 10 reps');
+    expect(formatSetFor(set(45, 'lb', 5), BARBELL)).toBe('45 lb per side · 134 lb total × 5 reps');
+    expect(formatSetFor(set(null, null, 12), BARBELL)).toBe('Empty bar (20 kg) × 12 reps');
+  });
+
+  it('shows dumbbells as a pair', () => {
+    expect(formatSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2 × 20 kg · 10 reps');
+  });
+
+  it('shows bodyweight with or without added weight', () => {
+    expect(formatSetFor(set(null, null, 12), BODYWEIGHT)).toBe('Bodyweight × 12 reps');
+    expect(formatSetFor(set(10, 'kg', 8), BODYWEIGHT)).toBe('Bodyweight + 10 kg × 8 reps');
+  });
+
+  it('shows a time instead of reps', () => {
+    expect(formatSetFor(set(null, null, null, 60), PLANK)).toBe('Bodyweight · 1 min');
+    expect(formatSetFor(set(10, 'kg', null, 45), PLANK)).toBe('Bodyweight + 10 kg · 45 s');
+    expect(formatSetFor(set(null, null, null, 90), PLANK)).toBe('Bodyweight · 1 min 30 s');
+  });
+
+  it('keeps the old format for exercises saved before equipment existed', () => {
+    expect(formatSetFor(set(80, 'kg', 10), null)).toBe('80 kg (176.4 lb) × 10 reps');
+  });
+
+  it('has a short form for chips', () => {
+    expect(shortSetFor(set(20, 'kg', 10), BARBELL)).toBe('20/side × 10');
+    expect(shortSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2×20 kg × 10');
+    expect(shortSetFor(set(null, null, null, 45), PLANK)).toBe('BW · 45 s');
+  });
+});
+
+describe('loadKg', () => {
+  it('counts the bar and both sides of a barbell', () => {
+    expect(loadKg(set(20, 'kg', 10), BARBELL, null)).toBe(60);
+    expect(loadKg(set(null, null, 10), BARBELL, null)).toBe(20);
+  });
+
+  it('counts both dumbbells', () => {
+    expect(loadKg(set(20, 'kg', 10), DUMBBELLS, null)).toBe(40);
+  });
+
+  it('adds body weight when it is known', () => {
+    expect(loadKg(set(10, 'kg', 8), BODYWEIGHT, 80)).toBe(90);
+    expect(loadKg(set(null, null, 8), BODYWEIGHT, 80)).toBe(80);
+    expect(loadKg(set(10, 'kg', 8), BODYWEIGHT, null)).toBe(10);
+    expect(loadKg(set(null, null, 8), BODYWEIGHT, null)).toBeNull();
+  });
+});

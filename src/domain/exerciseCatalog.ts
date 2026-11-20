@@ -81,6 +81,7 @@ export const CATALOG: CatalogExercise[] = [
   // Forearms
   entry('Wrist Curl', 'Forearms', ['wrist curls', 'forearm curl']),
   entry("Farmer's Walk", 'Forearms', ['farmers walk', 'farmer carry', 'farmers carry']),
+  entry('Dead Hang', 'Forearms', ['hang', 'bar hang', 'dead hangs']),
   // Quads
   entry('Squat', 'Quads', ['back squat', 'barbell squat', 'squats', 'high bar squat']),
   entry('Front Squat', 'Quads', ['front squats']),
@@ -90,6 +91,7 @@ export const CATALOG: CatalogExercise[] = [
   entry('Bulgarian Split Squat', 'Quads', ['split squat', 'bulgarian split squats', 'bulgarians', 'rear foot elevated split squat']),
   entry('Lunges', 'Quads', ['lunge', 'walking lunges', 'dumbbell lunges', 'walking lunge']),
   entry('Goblet Squat', 'Quads', ['goblet squats']),
+  entry('Wall Sit', 'Quads', ['wall sits', 'wall squat']),
   entry('Step-Up', 'Quads', ['step ups', 'box step up']),
   // Hamstrings
   entry('Romanian Deadlift', 'Hamstrings', ['rdl', 'rdls', 'romanian deadlifts', 'stiff leg deadlift', 'stiff legged deadlift']),
@@ -106,6 +108,7 @@ export const CATALOG: CatalogExercise[] = [
   entry('Seated Calf Raise', 'Calves', ['seated calf raises']),
   // Core
   entry('Plank', 'Core', ['planks']),
+  entry('Side Plank', 'Core', ['side planks']),
   entry('Crunch', 'Core', ['crunches', 'sit ups', 'sit-ups']),
   entry('Cable Crunch', 'Core', ['cable crunches', 'kneeling cable crunch']),
   entry('Hanging Leg Raise', 'Core', ['leg raises', 'hanging leg raises', 'leg raise', 'knee raises']),
@@ -202,6 +205,43 @@ function phraseSimilarity(spoken: string[], known: string[]): number {
   return (2 * total) / (spoken.length + known.length);
 }
 
+// How a word sounds, roughly: letters that speech recognizers confuse are merged and vowels after
+// the first letter dropped, so "dead left" and "deadlift" sound the same (requirement 15b).
+export function soundKey(text: string): string {
+  const letters = text
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .replace(/ph/g, 'f')
+    .replace(/ck/g, 'k')
+    .replace(/qu/g, 'kw')
+    .replace(/x/g, 'ks')
+    .replace(/c(?=[eiy])/g, 's')
+    .replace(/c/g, 'k')
+    .replace(/z/g, 's')
+    .replace(/dg/g, 'j')
+    .replace(/gh/g, 'g')
+    .replace(/^kn/, 'n')
+    .replace(/^wr/, 'r')
+    .replace(/th/g, 't')
+    .replace(/d/g, 't')
+    .replace(/b/g, 'p')
+    .replace(/v/g, 'f')
+    .replace(/g/g, 'k');
+  if (!letters) return '';
+  const rest = letters.slice(1).replace(/[aeiouyhw]/g, '');
+  return (letters[0] + rest).replace(/(.)\1+/g, '$1').replace(/s$/, '');
+}
+
+// How alike two phrases sound as a whole, 0 to 1, ignoring where the spaces fall.
+function soundSimilarity(spoken: string[], known: string[]): number {
+  const a = soundKey(spoken.join(''));
+  const b = soundKey(known.join(''));
+  if (a.length < 3 || b.length < 3) return 0;
+  if (a[0] !== b[0]) return 0;
+  const ratio = 1 - editDistance(a, b) / Math.max(a.length, b.length);
+  return ratio >= 0.8 ? 0.9 * ratio : 0;
+}
+
 export type ExerciseOption = {
   name: string;
   muscle: Muscle | null;
@@ -217,19 +257,43 @@ export type ExerciseMatch = {
   alternatives: ExerciseOption[];
 };
 
+// What the app knows about this trainer and workout, used to pick between close matches
+// (requirement 15c and d).
+export type MatchContext = {
+  // Muscle groups trained so far in this workout.
+  focus?: string[];
+  // What the trainer picked before when the app heard something else: heard words → name.
+  corrections?: Map<string, string>;
+};
+
+// The words that identify what was heard, for remembering a correction.
+export function correctionKey(spoken: string): string {
+  return words(cleanSpokenName(spoken)).join(' ');
+}
+
 // Finds the exercise the trainer named, among the catalog and the names they used before
 // (custom exercises they confirmed in earlier workouts).
-export function matchExercise(spoken: string, history: string[] = []): ExerciseMatch {
+export function matchExercise(spoken: string, history: string[] = [], context: MatchContext = {}): ExerciseMatch {
   const heard = cleanSpokenName(spoken);
   const spokenWords = words(heard);
   const options = new Map<string, ExerciseOption>();
+  const focus = new Set(context.focus ?? []);
+  const used = new Set(history.map((name) => name.toLowerCase()));
 
   const consider = (option: Omit<ExerciseOption, 'score'>, phrases: string[]) => {
-    const score = Math.max(...phrases.map((phrase) => phraseSimilarity(spokenWords, words(phrase))));
+    const score = Math.max(
+      ...phrases.map((phrase) => {
+        const known = words(phrase);
+        return Math.max(phraseSimilarity(spokenWords, known), soundSimilarity(spokenWords, known));
+      }),
+    );
     const key = option.name.toLowerCase();
     const previous = options.get(key);
     if (!previous || previous.score < score) options.set(key, { ...option, score });
   };
+  // Close matches lean toward this workout's muscle groups and the trainer's own exercises.
+  const leaning = (option: ExerciseOption) =>
+    option.score + (option.muscle && focus.has(option.muscle) ? 0.05 : 0) + (used.has(option.name.toLowerCase()) ? 0.03 : 0);
 
   for (const exercise of CATALOG) {
     consider(
@@ -242,13 +306,26 @@ export function matchExercise(spoken: string, history: string[] = []): ExerciseM
     consider({ name, muscle: null, catalogId: null }, [name]);
   }
 
-  const ranked = [...options.values()]
+  let ranked = [...options.values()]
     .filter((option) => option.score >= 0.5)
-    .sort((a, b) => b.score - a.score || a.name.length - b.name.length);
+    .sort((a, b) => leaning(b) - leaning(a) || a.name.length - b.name.length);
+
+  // The trainer corrected this exact mishearing before: trust what they chose then.
+  const corrected = context.corrections?.get(words(heard).join(' '));
+  if (corrected) {
+    const known = options.get(corrected.toLowerCase());
+    const option: ExerciseOption = known
+      ? { ...known, score: 1 }
+      : { name: corrected, muscle: muscleOf(corrected), catalogId: null, score: 1 };
+    ranked = [option, ...ranked.filter((o) => o.name.toLowerCase() !== corrected.toLowerCase())];
+    return { heard, best: option, confident: true, alternatives: ranked.slice(1).filter((o) => o.score >= 0.6).slice(0, 3) };
+  }
+
   const best = ranked[0] ?? null;
   const runnerUp = ranked[1];
   const confident =
-    best !== null && (best.score === 1 || (best.score >= 0.85 && (!runnerUp || best.score - runnerUp.score >= 0.1)));
+    best !== null &&
+    (best.score === 1 || (best.score >= 0.85 && (!runnerUp || leaning(best) - leaning(runnerUp) >= 0.1)));
   return { heard, best, confident, alternatives: ranked.slice(1).filter((o) => o.score >= 0.6).slice(0, 3) };
 }
 

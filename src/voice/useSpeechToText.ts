@@ -12,7 +12,8 @@ const GYM_WORDS = [
   'bodyweight', 'bench press', 'incline press', 'squat', 'deadlift', 'Romanian deadlift',
   'overhead press', 'lat pulldown', 'cable pushdown', 'cable fly', 'pull-ups', 'chin-ups', 'dips',
   'curls', 'hammer curls', 'lateral raises', 'leg press', 'leg extension', 'leg curl',
-  'hip thrust', 'lunges', 'barbell row', 'dumbbell', 'end workout',
+  'hip thrust', 'lunges', 'barbell row', 'dumbbell', 'end workout', 'plank', 'seconds', 'minute',
+  'a side', 'plates',
 ];
 
 const MESSAGES: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
@@ -30,15 +31,19 @@ const MESSAGES: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
 };
 
 // Speech to text on the device (free edition): Android's built-in recognizer, or the browser's on web.
-// onHeard receives the final text and the moment the user tapped Record, which is when the set ended.
-// `level` follows the microphone volume from 0 to 1, for animating the record button without
-// re-rendering the screen.
-export function useSpeechToText(onHeard: (text: string, tappedAt: Date) => void, contextualStrings: string[] = []) {
+// onHeard receives the final text, the moment the user tapped Record (when the set ended), and every
+// version the phone thought it heard, best first (requirement 15b). `level` follows the microphone
+// volume from 0 to 1, for animating the record button without re-rendering the screen.
+export function useSpeechToText(
+  onHeard: (text: string, tappedAt: Date, alternatives: string[]) => void,
+  contextualStrings: string[] = [],
+) {
   const [listening, setListening] = useState(false);
   const [partial, setPartial] = useState('');
   const [error, setError] = useState<string | null>(null);
   const tappedAt = useRef<Date | null>(null);
   const heard = useRef('');
+  const alternatives = useRef<string[]>([]);
   const lastPartial = useRef('');
   const onHeardRef = useRef(onHeard);
   const [level] = useState(() => new Animated.Value(0));
@@ -63,7 +68,10 @@ export function useSpeechToText(onHeard: (text: string, tappedAt: Date) => void,
     const text = event.results[0]?.transcript ?? '';
     setPartial(text);
     lastPartial.current = text.trim();
-    if (event.isFinal && text.trim()) heard.current = text.trim();
+    if (event.isFinal && text.trim()) {
+      heard.current = text.trim();
+      alternatives.current = event.results.map((r) => r.transcript.trim()).filter(Boolean);
+    }
   });
 
   useSpeechRecognitionEvent('error', (event) => {
@@ -77,11 +85,13 @@ export function useSpeechToText(onHeard: (text: string, tappedAt: Date) => void,
     setPartial('');
     // Some recognizers end without a final result when stopped early: use what was heard.
     const text = heard.current || lastPartial.current;
+    const versions = heard.current && alternatives.current.length > 0 ? alternatives.current : [text];
     heard.current = '';
     lastPartial.current = '';
+    alternatives.current = [];
     const at = tappedAt.current ?? new Date();
     tappedAt.current = null;
-    if (text) onHeardRef.current(text, at);
+    if (text) onHeardRef.current(text, at, versions);
   });
 
   const start = useCallback(async () => {
@@ -105,6 +115,7 @@ export function useSpeechToText(onHeard: (text: string, tappedAt: Date) => void,
       ExpoSpeechRecognitionModule.start({
         lang: 'en-US',
         interimResults: true,
+        maxAlternatives: 5,
         continuous: false,
         contextualStrings: [...GYM_WORDS, ...extraWords.current],
         volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },

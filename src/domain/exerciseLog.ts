@@ -2,6 +2,8 @@
 // This is the free edition's rule-based reader: it handles the common ways people
 // describe sets, and anything it gets wrong is fixed with the Edit button.
 
+import type { Equipment } from './equipment';
+
 export type WeightUnit = 'kg' | 'lb';
 export type Technique = 'pyramid' | 'drop set';
 
@@ -10,7 +12,12 @@ export type ParsedSet = {
   unit: WeightUnit | null;
   reps: number | null;
   toFailure: boolean;
+  // Seconds held, for exercises measured in time like a plank (requirement 14).
+  durationS?: number | null;
 };
+
+// A 20 kg plate is the 45 lb plate, so "two plates" means two of whichever the trainer uses.
+export const PLATE: Record<WeightUnit, number> = { kg: 20, lb: 45 };
 
 export type ParsedExercise = {
   name: string;
@@ -65,6 +72,9 @@ export type Token =
   | { type: 'times' }
   | { type: 'failure' }
   | { type: 'bodyweight' }
+  | { type: 'plates' }
+  | { type: 'side' }
+  | { type: 'timeunit'; seconds: number }
   | { type: 'technique'; technique: Technique }
   | { type: 'superset' }
   | { type: 'separator'; text: string }
@@ -157,8 +167,25 @@ function readNumber(words: string[], start: number): { value: number; length: nu
   return { value, length };
 }
 
+const TIME_UNITS: Record<string, number> = {
+  second: 1, seconds: 1, sec: 1, secs: 1,
+  minute: 60, minutes: 60, min: 60, mins: 60,
+};
+
+// Spoken and written times become plain numbers of seconds: "1:30", "a minute and a half".
+function spellOutTimes(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\b(\d{1,2}):([0-5]\d)\b/g, (_, m: string, s: string) => ` ${Number(m) * 60 + Number(s)} seconds `)
+    .replace(/\b(a|one) minute and a half\b/g, ' 90 seconds ')
+    .replace(/\bhalf a minute\b/g, ' 30 seconds ')
+    .replace(/\b(a|one) minute\b/g, ' 1 minute ')
+    .replace(/\b(a|one) plate\b/g, ' 1 plate ')
+    .replace(/\b(a|per|each) side\b/g, ' perside ');
+}
+
 export function tokenize(text: string): Token[] {
-  const words = normalize(text);
+  const words = normalize(spellOutTimes(text));
   const tokens: Token[] = [];
   for (let i = 0; i < words.length; ) {
     const word = words[i];
@@ -176,6 +203,9 @@ export function tokenize(text: string): Token[] {
     else if (word === 'x' || word === 'by' || word === 'times') tokens.push({ type: 'times' });
     else if (word === 'failure' || word === 'failed') tokens.push({ type: 'failure' });
     else if (word === 'bodyweight') tokens.push({ type: 'bodyweight' });
+    else if (word === 'plate' || word === 'plates') tokens.push({ type: 'plates' });
+    else if (word === 'perside') tokens.push({ type: 'side' });
+    else if (word in TIME_UNITS) tokens.push({ type: 'timeunit', seconds: TIME_UNITS[word] });
     else if (word === 'pyramid') tokens.push({ type: 'technique', technique: 'pyramid' });
     else if (word === 'dropset') tokens.push({ type: 'technique', technique: 'drop set' });
     else if (word === 'superset' || word === 'supersets') tokens.push({ type: 'superset' });
@@ -249,16 +279,23 @@ export type SetReading = {
 
 // Reads the sets in a stream of number, unit and keyword tokens. In 'set' mode (one exercise is
 // already chosen) "80 for 10" and "80 x 10" without a unit mean 80 of the current unit for 10 reps.
-export function readSets(stream: Token[], mode: 'log' | 'set' = 'log', defaultUnit: WeightUnit = 'kg'): SetReading {
+// In 'time' mode the exercise is held for a time (a plank), so a bare number is seconds.
+export function readSets(
+  stream: Token[],
+  mode: 'log' | 'set' | 'time' = 'log',
+  defaultUnit: WeightUnit = 'kg',
+): SetReading {
   const sets: ParsedSet[] = [];
   let technique: Technique | null = null;
   // undefined: no weight said yet; null: bodyweight.
   let weight: { value: number; unit: WeightUnit } | null | undefined;
   let pendingCount: number | null = null;
   const waitingForWeight: ParsedSet[] = [];
-  const hasUnit = stream.some((t) => t.type === 'unit' || t.type === 'bodyweight');
+  const hasUnit = stream.some(
+    (t) => t.type === 'unit' || t.type === 'bodyweight' || t.type === 'plates' || t.type === 'side',
+  );
 
-  const push = (reps: number | null, count = 1, toFailure = false) => {
+  const push = (reps: number | null, count = 1, toFailure = false, durationS?: number) => {
     for (let k = 0; k < count; k++) {
       const set: ParsedSet = {
         weight: weight ? weight.value : null,
@@ -266,9 +303,26 @@ export function readSets(stream: Token[], mode: 'log' | 'set' = 'log', defaultUn
         reps,
         toFailure,
       };
+      if (durationS !== undefined) set.durationS = durationS;
       if (weight === undefined) waitingForWeight.push(set);
       sets.push(set);
     }
+  };
+
+  // "1 minute 30 seconds" is one time.
+  const readDuration = (i: number): { seconds: number; used: number } | null => {
+    const token = stream[i];
+    const unit = stream[i + 1];
+    if (token?.type !== 'num' || unit?.type !== 'timeunit') return null;
+    let seconds = token.value * unit.seconds;
+    let used = 2;
+    const more = stream[i + 2];
+    const moreUnit = stream[i + 3];
+    if (unit.seconds === 60 && more?.type === 'num' && moreUnit?.type === 'timeunit' && moreUnit.seconds === 1) {
+      seconds += more.value;
+      used = 4;
+    }
+    return { seconds, used };
   };
 
   const setWeight = (value: { value: number; unit: WeightUnit } | null) => {
@@ -293,9 +347,28 @@ export function readSets(stream: Token[], mode: 'log' | 'set' = 'log', defaultUn
       else push(null, pendingCount ?? 1, true);
       pendingCount = null;
     } else if (token.type === 'num') {
-      if (next?.type === 'unit') {
+      const duration = readDuration(i);
+      if (duration) {
+        const failure = stream[i + duration.used]?.type === 'failure';
+        push(null, pendingCount ?? 1, failure, duration.seconds);
+        pendingCount = null;
+        i += duration.used - 1 + (failure ? 1 : 0);
+      } else if (next?.type === 'unit') {
         setWeight({ value: token.value, unit: next.unit });
         i += 1;
+      } else if (next?.type === 'side') {
+        // "20 a side": a weight in the trainer's usual unit.
+        setWeight({ value: token.value, unit: defaultUnit });
+        i += 1;
+      } else if (next?.type === 'plates') {
+        // "two plates": per side, in the trainer's usual plates.
+        setWeight({ value: token.value * PLATE[defaultUnit], unit: defaultUnit });
+        i += 1;
+      } else if (mode === 'time' && next?.type !== 'reps' && next?.type !== 'times' && next?.type !== 'sets') {
+        const failure = next?.type === 'failure';
+        push(null, pendingCount ?? 1, failure, token.value);
+        pendingCount = null;
+        i += failure ? 1 : 0;
       } else if (
         mode === 'set' &&
         !hasUnit &&
@@ -477,5 +550,16 @@ export type LoggedExercise = {
   createdAt: string;
   // null while the trainer is still doing this exercise.
   finishedAt: string | null;
+  // How the weight is meant (requirement 17). Null for exercises saved before equipment existed.
+  equipment: Equipment | null;
+  measure: 'reps' | 'time';
+  barKg: number | null;
   sets: LoggedSet[];
 };
+
+// The equipment and measure of a saved exercise, or null when it was saved before they existed.
+export function kindOf(exercise: Pick<LoggedExercise, 'equipment' | 'measure' | 'barKg'>) {
+  return exercise.equipment
+    ? { equipment: exercise.equipment, measure: exercise.measure, barKg: exercise.barKg }
+    : null;
+}

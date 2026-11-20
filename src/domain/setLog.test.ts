@@ -1,3 +1,4 @@
+import type { ParsedSet } from './exerciseLog';
 import { parseSetLog, type SetCommand } from './setLog';
 
 const set = (weight: number | null, unit: 'kg' | 'lb' | null, reps: number | null, toFailure = false) => ({
@@ -55,6 +56,35 @@ describe('parseSetLog', () => {
     expect(parseSetLog('next exercise', null)).toEqual({ kind: 'next-exercise' });
     expect(parseSetLog("I'm done with this exercise", null)).toEqual({ kind: 'next-exercise' });
     expect(parseSetLog('end workout', null)).toEqual({ kind: 'end-workout' });
+  });
+
+  it('reads plates as the weight per side', () => {
+    expect(sets('two plates 8 reps')).toEqual([set(40, 'kg', 8)]);
+    expect(sets('a plate for 10')).toEqual([set(20, 'kg', 10)]);
+    expect(sets('2 plates 5', set(135, 'lb', 5))).toEqual([set(90, 'lb', 5)]);
+    expect(sets('20 a side 10')).toEqual([set(20, 'kg', 10)]);
+  });
+
+  it('reads times for exercises held for a time', () => {
+    const timed = (text: string, previous: ParsedSet | null = null) => {
+      const result = parseSetLog(text, previous, 'time');
+      if (result.kind !== 'sets') throw new Error(`Not read: ${text} → ${JSON.stringify(result)}`);
+      return result.sets.map((s) => [s.weight, s.unit, s.durationS, s.toFailure]);
+    };
+    expect(timed('60 seconds')).toEqual([[null, null, 60, false]]);
+    expect(timed('45')).toEqual([[null, null, 45, false]]);
+    expect(timed('a minute')).toEqual([[null, null, 60, false]]);
+    expect(timed('1:30')).toEqual([[null, null, 90, false]]);
+    expect(timed('one minute and a half')).toEqual([[null, null, 90, false]]);
+    expect(timed('1 minute 15 seconds')).toEqual([[null, null, 75, false]]);
+    expect(timed('plus 10 kg 45 seconds')).toEqual([[10, 'kg', 45, false]]);
+    expect(timed('50 seconds', { ...set(10, 'kg', null), durationS: 45 })).toEqual([[10, 'kg', 50, false]]);
+    expect(timed('90 seconds to failure')).toEqual([[null, null, 90, true]]);
+    expect(parseSetLog('10 kg', null, 'time')).toMatchObject({ kind: 'not-understood', reason: expect.stringContaining('time') });
+  });
+
+  it('still reads reps for exercises measured in reps when a time is said', () => {
+    expect(parseSetLog('60 seconds', null).kind).toBe('sets');
   });
 
   it('explains what is missing', () => {
