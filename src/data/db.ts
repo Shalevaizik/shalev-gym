@@ -53,6 +53,26 @@ const MIGRATIONS = [
   ALTER TABLE exercises ADD COLUMN finished_at TEXT;
   UPDATE exercises SET finished_at = created_at;
   `,
+  // The trainer's profile and dated body weights (requirement 20).
+  `
+  CREATE TABLE profiles (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    birth_date TEXT,
+    sex TEXT CHECK (sex IN ('male', 'female')),
+    height_cm REAL CHECK (height_cm IS NULL OR height_cm > 0),
+    height_unit TEXT NOT NULL DEFAULT 'cm' CHECK (height_unit IN ('cm', 'ft')),
+    weight_reminder_dismissed_at TEXT,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE body_weights (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    weight REAL NOT NULL CHECK (weight > 0),
+    unit TEXT NOT NULL CHECK (unit IN ('kg', 'lb')),
+    recorded_at TEXT NOT NULL
+  );
+  CREATE INDEX body_weights_user ON body_weights (user_id, recorded_at DESC);
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

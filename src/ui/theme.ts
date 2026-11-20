@@ -12,6 +12,12 @@ const light = {
   ripple: 'rgba(23, 26, 23, 0.12)',
   danger: '#B3261E',
   onDanger: '#FFFFFF',
+  // The start screen's sections: Workout uses accent (green), Analyse blue, Eat grey.
+  analyse: '#1F5FA8',
+  onAnalyse: '#FFFFFF',
+  eat: '#6B716B',
+  onEat: '#FFFFFF',
+  overlay: 'rgba(0, 0, 0, 0.25)',
 };
 
 const dark: typeof light = {
@@ -26,6 +32,11 @@ const dark: typeof light = {
   ripple: 'rgba(240, 242, 239, 0.16)',
   danger: '#F2B8B5',
   onDanger: '#3D0B08',
+  analyse: '#8AB8F2',
+  onAnalyse: '#0A1B2E',
+  eat: '#3E443E',
+  onEat: '#E4E8E3',
+  overlay: 'rgba(0, 0, 0, 0.5)',
 };
 
 export type Theme = typeof light;

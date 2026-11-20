@@ -1,4 +1,5 @@
 import { isStale, type EndReason, type Workout } from '../domain/workout';
+import { workoutTitle, type TitleInput } from '../domain/workoutTitle';
 import type { Db } from './db';
 
 type WorkoutRow = {
@@ -117,4 +118,28 @@ export async function deleteWorkout(db: Db, userId: string, id: string): Promise
     await db.execAsync('ROLLBACK');
     throw error;
   }
+}
+
+// The title the app gives each workout from the exercises logged in it (requirement 21), by
+// workout id. Worked out when shown, so it stays right after an exercise is edited.
+export async function autoTitles(db: Db, userId: string): Promise<Map<string, string>> {
+  const rows = await db.getAllAsync<{ workout_id: string; name: string; muscle: string | null; sets: number }>(
+    `SELECT e.workout_id, e.name, e.muscle, COUNT(s.id) AS sets
+     FROM exercises e LEFT JOIN exercise_sets s ON s.exercise_id = e.id
+     WHERE e.user_id = ? GROUP BY e.id ORDER BY e.workout_id, e.position`,
+    [userId],
+  );
+  const byWorkout = new Map<string, TitleInput[]>();
+  for (const row of rows) {
+    const list = byWorkout.get(row.workout_id) ?? [];
+    list.push({ name: row.name, muscle: row.muscle, sets: row.sets });
+    byWorkout.set(row.workout_id, list);
+  }
+  return new Map([...byWorkout].map(([id, exercises]) => [id, workoutTitle(exercises)]));
+}
+
+// A title the trainer chose; null or blank goes back to the app's own title.
+export async function renameWorkout(db: Db, userId: string, id: string, title: string | null): Promise<void> {
+  const clean = title?.trim() || null;
+  await db.runAsync('UPDATE workouts SET title = ? WHERE user_id = ? AND id = ?', [clean, userId, id]);
 }

@@ -1,28 +1,26 @@
-import { randomUUID } from 'expo-crypto';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
-import { closeStaleWorkout, listWorkouts, startWorkout } from '@/data/workoutRepo';
-import {
-  durationMs,
-  formatDayLabel,
-  formatDuration,
-  formatTime,
-  groupByDay,
-  type Workout,
-} from '@/domain/workout';
+import { dismissWeightReminder, getProfile } from '@/data/profileRepo';
+import { closeStaleWorkout, getActiveWorkout } from '@/data/workoutRepo';
+import { needsWeightReminder, type Profile } from '@/domain/profile';
+import { formatTime, type Workout } from '@/domain/workout';
 import { Button } from '@/ui/Button';
+import { SectionButton } from '@/ui/SectionButton';
 import { useTheme } from '@/ui/theme';
 
-export default function Home() {
+// The start screen (requirement 18): Workout, Analyse and Eat.
+export default function Start() {
   const db = useSQLiteContext();
-  const { user, accountsEnabled, signOut } = useAuth();
+  const { user } = useAuth();
   const theme = useTheme();
-  const [workouts, setWorkouts] = useState<Workout[] | null>(null);
-  const [starting, setStarting] = useState(false);
+  const [active, setActive] = useState<Workout | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [eatNotice, setEatNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const userId = user?.id;
 
@@ -30,13 +28,16 @@ export default function Home() {
     useCallback(() => {
       if (!userId) return;
       let cancelled = false;
+      setEatNotice(false);
       (async () => {
         try {
           await closeStaleWorkout(db, userId, new Date());
-          const loaded = await listWorkouts(db, userId);
-          if (!cancelled) setWorkouts(loaded);
+          const [workout, loadedProfile] = await Promise.all([getActiveWorkout(db, userId), getProfile(db, userId)]);
+          if (cancelled) return;
+          setActive(workout);
+          setProfile(loadedProfile);
         } catch {
-          if (!cancelled) setError('Your workouts could not be loaded.');
+          if (!cancelled) setError('Your data could not be loaded.');
         }
       })();
       return () => {
@@ -45,101 +46,84 @@ export default function Home() {
     }, [db, userId]),
   );
 
-  const now = new Date();
-  const active = workouts?.find((w) => w.endedAt === null) ?? null;
-  const finished = useMemo(() => (workouts ?? []).filter((w) => w.endedAt !== null), [workouts]);
-  const days = useMemo(() => groupByDay(finished), [finished]);
-
-  async function start() {
+  async function notNow() {
     if (!userId) return;
-    setError(null);
-    setStarting(true);
+    const now = new Date();
+    setProfile((current) => current && { ...current, reminderDismissedAt: now.toISOString() });
     try {
-      const workout = await startWorkout(db, userId, randomUUID(), new Date());
-      router.push({ pathname: '/workout/[id]', params: { id: workout.id } });
+      await dismissWeightReminder(db, userId, now);
     } catch {
-      setError('The workout could not be started. Please try again.');
-    } finally {
-      setStarting(false);
+      // Only the reminder is affected: it shows again next time.
     }
   }
 
-  async function handleSignOut() {
-    setError(null);
-    try {
-      await signOut();
-    } catch {
-      setError('You could not be signed out. Please try again.');
-    }
-  }
-
-  const cardStyle = [styles.card, { backgroundColor: theme.surface, borderColor: theme.border }];
+  const remind = profile !== null && needsWeightReminder(profile, new Date());
+  const firstTime = profile !== null && profile.weight === null;
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.column}>
-        {active ? (
-          <View style={cardStyle}>
-            <Text style={[styles.cardEyebrow, { color: theme.accent }]}>In progress</Text>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>
-              Started at {formatTime(active.startedAt)}
+        {remind && (
+          <View style={[styles.reminder, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.reminderTitleRow}>
+              <Ionicons color={theme.accent} name={firstTime ? 'person-circle-outline' : 'scale-outline'} size={24} />
+              <Text style={[styles.reminderTitle, { color: theme.text }]}>
+                {firstTime ? 'Set up your profile' : 'Time to update your weight'}
+              </Text>
+            </View>
+            <Text style={[styles.reminderText, { color: theme.textMuted }]}>
+              {firstTime
+                ? 'Add your age, height and weight so bodyweight exercises count toward your progress.'
+                : 'It’s been a month. A quick update keeps your bodyweight exercises accurate.'}
             </Text>
-            <View style={styles.cardAction}>
-              <Button
-                label="Continue workout"
-                onPress={() =>
-                  router.push({ pathname: '/workout/[id]', params: { id: active.id } })
-                }
-              />
+            <View style={styles.reminderActions}>
+              <View style={styles.flex}>
+                <Button label={firstTime ? 'Set up' : 'Update'} onPress={() => router.push('/profile')} />
+              </View>
+              <View style={styles.flex}>
+                <Button label="Not now" onPress={notNow} variant="secondary" />
+              </View>
             </View>
           </View>
-        ) : (
-          <Button busy={starting} disabled={workouts === null} label="Start workout" onPress={start} />
         )}
 
+        <SectionButton
+          background={theme.accent}
+          detail={active ? `In progress · started at ${formatTime(active.startedAt)}` : 'Start a workout or see past ones'}
+          foreground={theme.onAccent}
+          icon="barbell"
+          label={active ? 'Continue workout' : 'Workout'}
+          onPress={() =>
+            active ? router.push({ pathname: '/workout/[id]', params: { id: active.id } }) : router.push('/workout')
+          }
+        />
+        <SectionButton
+          background={theme.analyse}
+          detail="Summaries, monthly report and progress"
+          foreground={theme.onAnalyse}
+          icon="stats-chart"
+          label="Analyse"
+          onPress={() => router.push('/analyse')}
+        />
+        <SectionButton
+          background={theme.eat}
+          badge="Coming soon"
+          detail="Track what you eat"
+          foreground={theme.onEat}
+          icon="restaurant"
+          label="Eat"
+          onPress={() => setEatNotice(true)}
+        />
+
+        {eatNotice && (
+          <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.textMuted }]}>
+            Eat is coming soon. Nutrition tracking will be added in a later version.
+          </Text>
+        )}
         {error && (
-          <Text accessibilityLiveRegion="polite" style={[styles.error, { color: theme.danger }]}>
+          <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.danger }]}>
             {error}
           </Text>
-        )}
-
-        {workouts !== null && finished.length === 0 && !active && (
-          <Text style={[styles.empty, { color: theme.textMuted }]}>
-            Your finished workouts will appear here.
-          </Text>
-        )}
-
-        {days.map((day) => (
-          <View key={day.key} style={styles.day}>
-            <Text accessibilityRole="header" style={[styles.dayLabel, { color: theme.textMuted }]}>
-              {formatDayLabel(day.date, now)}
-            </Text>
-            {day.workouts.map((workout) => (
-              <Pressable
-                accessibilityRole="button"
-                key={workout.id}
-                onPress={() =>
-                  router.push({ pathname: '/workout/[id]', params: { id: workout.id } })
-                }
-                style={({ pressed }) => [cardStyle, styles.row, pressed && styles.pressed]}>
-                <Text style={[styles.rowTitle, { color: theme.text }]}>
-                  {workout.title ?? `Workout at ${formatTime(workout.startedAt)}`}
-                </Text>
-                <Text style={[styles.rowDetail, { color: theme.textMuted }]}>
-                  {workout.endReason === 'auto'
-                    ? 'Ended automatically'
-                    : formatDuration(durationMs(workout, now))}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ))}
-
-        {accountsEnabled && (
-          <View style={styles.account}>
-            <Text style={[styles.accountEmail, { color: theme.textMuted }]}>{user?.email}</Text>
-            <Button label="Sign out" onPress={handleSignOut} variant="secondary" />
-          </View>
         )}
       </View>
     </ScrollView>
@@ -148,19 +132,12 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   content: { padding: 20, flexGrow: 1 },
-  column: { width: '100%', maxWidth: 560, alignSelf: 'center' },
-  card: { borderWidth: 1, borderRadius: 14, padding: 16 },
-  cardEyebrow: { fontSize: 14, fontWeight: '700' },
-  cardTitle: { fontSize: 22, fontWeight: '700', marginTop: 4 },
-  cardAction: { marginTop: 16 },
-  error: { fontSize: 15, marginTop: 14 },
-  empty: { fontSize: 16, textAlign: 'center', marginTop: 40 },
-  day: { marginTop: 28, gap: 10 },
-  dayLabel: { fontSize: 15, fontWeight: '600' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  rowTitle: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
-  rowDetail: { fontSize: 15 },
-  pressed: { opacity: 0.7 },
-  account: { marginTop: 40, gap: 10 },
-  accountEmail: { fontSize: 14, textAlign: 'center' },
+  column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 16 },
+  flex: { flex: 1 },
+  reminder: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 10 },
+  reminderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  reminderTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
+  reminderText: { fontSize: 15, lineHeight: 21 },
+  reminderActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  message: { fontSize: 15, textAlign: 'center' },
 });

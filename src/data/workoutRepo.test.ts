@@ -1,12 +1,15 @@
 import { AUTO_END_IDLE_MS } from '../domain/workout';
 import { migrate, type Db } from './db';
+import { logSets, startExercise } from './exerciseRepo';
 import { openTestDb } from './testDb';
 import {
+  autoTitles,
   closeStaleWorkout,
   endWorkout,
   getActiveWorkout,
   getWorkout,
   listWorkouts,
+  renameWorkout,
   startWorkout,
 } from './workoutRepo';
 
@@ -111,5 +114,42 @@ describe('workoutRepo', () => {
 
     await endWorkout(db, 'bob', 'w1', later(HOUR));
     expect((await getActiveWorkout(db, 'alice'))?.id).toBe('w1');
+  });
+
+  describe('titles', () => {
+    let counter = 0;
+    const newId = () => `id${++counter}`;
+    const set = { weight: 60, unit: 'kg' as const, reps: 10, toFailure: false };
+
+    async function doExercise(userId: string, workoutId: string, name: string, muscle: string | null, sets: number) {
+      const [id] = await startExercise(db, userId, workoutId, [{ name, muscle }], null, later(1000), newId);
+      await logSets(db, userId, id, Array.from({ length: sets }, () => set), null, later(2000), newId);
+    }
+
+    it('names each workout from its exercises, for its owner only', async () => {
+      await startWorkout(db, 'alice', 'w1', T0);
+      await doExercise('alice', 'w1', 'Lat Pulldown', 'Back', 4);
+      await doExercise('alice', 'w1', 'Hammer Curl', 'Biceps', 3);
+      await endWorkout(db, 'alice', 'w1', later(HOUR));
+      await startWorkout(db, 'alice', 'w2', later(2 * HOUR));
+      await doExercise('alice', 'w2', 'Squat', 'Quads', 5);
+
+      const titles = await autoTitles(db, 'alice');
+      expect(titles.get('w1')).toBe('Pull · Back & Biceps');
+      expect(titles.get('w2')).toBe('Legs');
+      expect((await autoTitles(db, 'bob')).size).toBe(0);
+    });
+
+    it('keeps a title the trainer chose until it is cleared', async () => {
+      await startWorkout(db, 'alice', 'w1', T0);
+      await renameWorkout(db, 'alice', 'w1', '  Deload day ');
+      expect((await getWorkout(db, 'alice', 'w1'))?.title).toBe('Deload day');
+
+      await renameWorkout(db, 'bob', 'w1', 'Not yours');
+      expect((await getWorkout(db, 'alice', 'w1'))?.title).toBe('Deload day');
+
+      await renameWorkout(db, 'alice', 'w1', '   ');
+      expect((await getWorkout(db, 'alice', 'w1'))?.title).toBeNull();
+    });
   });
 });

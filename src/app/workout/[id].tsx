@@ -26,7 +26,7 @@ import {
   startExercise,
   type NewExercise,
 } from '@/data/exerciseRepo';
-import { deleteWorkout, endWorkout, getWorkout } from '@/data/workoutRepo';
+import { deleteWorkout, endWorkout, getWorkout, renameWorkout } from '@/data/workoutRepo';
 import { muscleOf, searchExercises } from '@/domain/exerciseCatalog';
 import { parseExerciseChoice, type ChosenPart } from '@/domain/exerciseChoice';
 import {
@@ -45,6 +45,7 @@ import {
   formatTime,
   type Workout,
 } from '@/domain/workout';
+import { workoutTitle } from '@/domain/workoutTitle';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { ExerciseCard } from '@/ui/ExerciseCard';
@@ -93,6 +94,8 @@ export default function WorkoutScreen() {
   const [typed, setTyped] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
   const userId = user?.id;
   const inProgress = workout?.endedAt === null;
 
@@ -354,6 +357,18 @@ export default function WorkoutScreen() {
     }
   }
 
+  async function saveTitle() {
+    if (!userId) return;
+    setError(null);
+    try {
+      await renameWorkout(db, userId, id, titleDraft);
+      setWorkout((current) => current && { ...current, title: titleDraft.trim() || null });
+      setRenaming(false);
+    } catch {
+      setError('The title could not be saved. Please try again.');
+    }
+  }
+
   async function remove() {
     if (!userId) return;
     setError(null);
@@ -406,6 +421,8 @@ export default function WorkoutScreen() {
     .at(-1);
   const suggestions = mode === 'choose' && typed.trim().length >= 2 ? searchExercises(typed, history) : [];
   const previous = target?.sets.at(-1) ?? null;
+  const autoTitle = workoutTitle(exercises.map((e) => ({ name: e.name, muscle: e.muscle, sets: e.sets.length })));
+  const shownTitle = workout.title ?? autoTitle;
 
   const noticeView = shownNotice && (
     <View
@@ -469,6 +486,49 @@ export default function WorkoutScreen() {
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
+          {!inProgress &&
+            (renaming ? (
+              <View style={styles.renameBox}>
+                <TextInput
+                  accessibilityLabel="Workout title"
+                  autoFocus
+                  maxLength={60}
+                  onChangeText={setTitleDraft}
+                  onSubmitEditing={saveTitle}
+                  placeholder={autoTitle}
+                  placeholderTextColor={theme.textMuted}
+                  returnKeyType="done"
+                  style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
+                  value={titleDraft}
+                />
+                <Text style={[styles.renameHint, { color: theme.textMuted }]}>
+                  Leave it empty to use the app’s title, “{autoTitle}”.
+                </Text>
+                <View style={styles.renameActions}>
+                  <View style={styles.flex}>
+                    <Button label="Save title" onPress={saveTitle} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Button label="Cancel" onPress={() => setRenaming(false)} variant="secondary" />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                accessibilityHint="Rename this workout"
+                accessibilityLabel={`Title: ${shownTitle}`}
+                accessibilityRole="button"
+                onPress={() => {
+                  setTitleDraft(workout.title ?? '');
+                  setRenaming(true);
+                }}
+                style={({ pressed }) => [styles.titleRow, pressed && { opacity: 0.6 }]}>
+                <Text accessibilityRole="header" style={[styles.workoutTitle, { color: theme.text }]}>
+                  {shownTitle}
+                </Text>
+                <Ionicons color={theme.textMuted} name="pencil" size={18} />
+              </Pressable>
+            ))}
           <View style={styles.header}>
             <View style={styles.flex}>
               <Text style={[styles.date, { color: theme.textMuted }]}>{formatLongDate(new Date(workout.startedAt))}</Text>
@@ -835,6 +895,11 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40, flexGrow: 1 },
   column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 16 },
   header: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, alignSelf: 'flex-start' },
+  workoutTitle: { fontSize: 26, fontWeight: '800', flexShrink: 1 },
+  renameBox: { gap: 8, marginBottom: 12 },
+  renameHint: { fontSize: 14 },
+  renameActions: { flexDirection: 'row', gap: 10 },
   date: { fontSize: 15 },
   times: { fontSize: 18, fontWeight: '700', marginTop: 2 },
   clock: { fontSize: 34, fontWeight: '700', fontVariant: ['tabular-nums'] },
