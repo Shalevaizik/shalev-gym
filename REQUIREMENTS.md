@@ -101,3 +101,8 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - d. Each body weight update is saved with its date, so bodyweight exercises (requirement No. 17f) use the user's weight at the time of the workout, and weight changes can be shown over time
     - e. Once a month the app reminds the user to update their body weight (per requirement No. 17f). If the user skips it, the app keeps using the last weight entered
     - f. Until the user enters a body weight, bodyweight exercises count reps and added weight only
+21. The list of previous workouts (requirement No. 18a) will show for each workout:
+    - a. The title of the workout, e.g. "Upper Body", "Back & Biceps", "Legs"
+    - b. The date and time of the workout
+    - c. The app creates the title automatically when the workout ends, from the exercises logged and the muscle groups they train (per requirement No. 9). The user never has to say or type a title
+    - d. Optionally, the user can tap a title to rename it (e.g. "Deload day")
