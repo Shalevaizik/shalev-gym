@@ -6,7 +6,7 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
 
 ## New ideas
 
-- 
+- 2026-11-20: Log cardio and conditioning sessions too, not only reps/weight or time/weight exercises. For example 15 minutes of HIIT, CrossFit or walking on the treadmill at the start of a workout.
 
 ## Parked
 
