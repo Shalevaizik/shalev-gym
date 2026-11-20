@@ -46,3 +46,51 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - d. Recommendations for next month
       - Keep current plan / switch
       - Main focus for next month (e.g. legs are neglected, do less chest and give more focus to lower body)
+14. The app will identify the type of exercise and ask for user input accordingly:
+    - a. Weight and reps for any type of weight movement
+    - b. Time and weight for specific exercises that are measured in time (e.g. Plank), with the weight being either bodyweight or added weight
+15. When the app is not sure it understood the user's input correctly (for example due to voice-to-text errors or gym noise), it will:
+    - a. Show its best guess and a short list of alternatives ("Did you mean…?"), and let the user confirm with one tap, say it again, or type it
+    - b. Consider several possible versions of what was heard, and exercise names that sound alike, not only names that are spelled alike
+    - c. Prefer exercises that fit the current workout's focus (per requirement No. 9) and exercises the user has done before
+    - d. Learn from the user's corrections, so the same mistake is understood correctly next time
+    - e. Check numbers that don't fit the user's history (e.g. 18 kg on an exercise usually done with 80 kg) and ask the user to confirm them
+16. During a running workout, the app will suggest the next exercise, based on:
+    - a. The workout's focus so far (e.g. back focused → suggest other back exercises)
+    - b. Exercises the user did in past workouts with a similar focus
+    - c. Leaving out exercises already done in the current workout
+
+    The user can pick a suggestion with one tap or ignore it and say or type any other exercise.
+17. The app will know the equipment type of each exercise and understand and show the working weight accordingly:
+    - a. Barbell: the user says the weight per side (e.g. "20 a side", "two plates"). The app adds the bar's own weight (20 kg by default, adjustable per exercise, e.g. EZ bar or Smith machine) and shows both, e.g. "20 per side (60 kg total)"
+    - b. Dumbbells (pair): the user says the weight of one dumbbell. The app shows "2 × 20 kg" and counts 40 kg for progress and volume
+    - c. Single dumbbell (e.g. one-arm dumbbell row): the weight of the one dumbbell
+    - d. Machine or cable: the weight as shown on the machine
+    - e. Plate-loaded machine (e.g. leg press): the weight per side, like a barbell
+    - f. Bodyweight (e.g. pull-ups, dips, plank): bodyweight, with or without added weight (per requirement No. 14). The app will ask the user for their body weight once a month, to include it in progress and volume
+    - g. The app will keep what the user said together with the calculated total, so PRs and volume per muscle group (requirement No. 13) are compared correctly across equipment types
+18. App structure. When the app opens, the user sees three large buttons:
+    - a. Workout (green):
+      - Start a new workout
+      - See previous workouts
+    - b. Analyse (blue):
+      - Workout summary (per requirement No. 11)
+      - Monthly summary (per requirements No. 12, 13 and 19)
+      - Progress per exercise over time
+    - c. Eat (grey): marked "Coming soon" and shows a short "Coming soon" message when tapped
+    - d. If a workout is in progress, the Workout button shows "Continue workout" and goes straight back to it
+    - e. A settings icon on the start screen holds the account (sign-out), monthly body weight and bar weights
+19. The Monthly summary will open with a body heat map:
+    - a. Front and back views of the body, each muscle group coloured by the number of hard sets it got that month
+    - b. Colours: grey / no colour for neglected muscle groups, then green → blue → purple, where purple marks overtrained muscle groups. Default thresholds, as the weekly average across the month:
+
+      | Colour | Hard sets per week | Meaning |
+      |---|---|---|
+      | Grey | under 4 | Neglected |
+      | Green | 4–10 | Maintaining |
+      | Blue | 10–20 | Growing well |
+      | Purple | over 20 | Possibly overtrained |
+
+    - c. An exercise counts as a full set for its main muscle group and half a set for each helper muscle group (e.g. Bench Press: chest full; triceps and shoulders half)
+    - d. Tapping a muscle group shows its details: number of sets, number of workouts it was trained in, and its top exercises
+    - e. Below the map, the rest of the monthly summary (requirement No. 13)
