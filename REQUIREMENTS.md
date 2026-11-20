@@ -79,7 +79,7 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
       - Progress per exercise over time
     - c. Eat (grey): marked "Coming soon" and shows a short "Coming soon" message when tapped
     - d. If a workout is in progress, the Workout button shows "Continue workout" and goes straight back to it
-    - e. A settings icon on the start screen holds the account (sign-out), monthly body weight and bar weights
+    - e. A menu button (☰) in the top-right corner of the app opens a drop-down menu with the user's profile (requirement No. 20) and settings: bar weights and sign-out
 19. The Monthly summary will open with a body heat map:
     - a. Front and back views of the body, each muscle group coloured by the number of hard sets it got that month
     - b. Colours: grey / no colour for neglected muscle groups, then green → blue → purple, where purple marks overtrained muscle groups. Default thresholds, as the weekly average across the month:
@@ -94,3 +94,10 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - c. An exercise counts as a full set for its main muscle group and half a set for each helper muscle group (e.g. Bench Press: chest full; triceps and shoulders half)
     - d. Tapping a muscle group shows its details: number of sets, number of workouts it was trained in, and its top exercises
     - e. Below the map, the rest of the monthly summary (requirement No. 13)
+20. User profile, in the menu (requirement No. 18e):
+    - a. The user fills in: date of birth, sex, body weight and height. The app works out the age from the date of birth
+    - b. Height in cm or in feet and inches; body weight in kg or lb (per requirement No. 5b)
+    - c. Once filled in, the menu shows the user's details and an "Update" button to change them
+    - d. Each body weight update is saved with its date, so bodyweight exercises (requirement No. 17f) use the user's weight at the time of the workout, and weight changes can be shown over time
+    - e. Once a month the app reminds the user to update their body weight (per requirement No. 17f). If the user skips it, the app keeps using the last weight entered
+    - f. Until the user enters a body weight, bodyweight exercises count reps and added weight only
