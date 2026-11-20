@@ -10,7 +10,7 @@ import {
 } from '../domain/exerciseLog';
 import type { Db } from './db';
 
-type ExerciseRow = {
+export type ExerciseRow = {
   id: string;
   workout_id: string;
   position: number;
@@ -26,7 +26,7 @@ type ExerciseRow = {
   bar_kg: number | null;
 };
 
-type SetRow = {
+export type SetRow = {
   id: string;
   exercise_id: string;
   weight: number | null;
@@ -49,7 +49,7 @@ const toSet = (row: SetRow): LoggedSet => ({
   endedAt: row.ended_at,
 });
 
-function assemble(exercises: ExerciseRow[], sets: SetRow[]): LoggedExercise[] {
+export function assemble(exercises: ExerciseRow[], sets: SetRow[]): LoggedExercise[] {
   const byExercise = new Map<string, LoggedSet[]>();
   for (const row of sets) {
     const list = byExercise.get(row.exercise_id) ?? [];

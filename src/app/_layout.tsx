@@ -45,7 +45,12 @@ function Routes() {
         <Stack.Screen name="workout/history" options={{ title: 'Previous workouts', headerRight: menu }} />
         <Stack.Screen name="workout/[id]" options={{ title: 'Workout', headerRight: menu }} />
         <Stack.Screen name="exercise/[id]" options={{ title: 'Edit exercise' }} />
-        <Stack.Screen name="analyse" options={{ title: 'Analyse', headerRight: menu }} />
+        <Stack.Screen name="analyse/index" options={{ title: 'Analyse', headerRight: menu }} />
+        <Stack.Screen name="analyse/monthly" options={{ title: 'Monthly summary', headerRight: menu }} />
+        <Stack.Screen name="analyse/summary/index" options={{ title: 'Workout summary', headerRight: menu }} />
+        <Stack.Screen name="analyse/summary/[id]" options={{ title: 'Workout summary', headerRight: menu }} />
+        <Stack.Screen name="analyse/progress/index" options={{ title: 'Progress', headerRight: menu }} />
+        <Stack.Screen name="analyse/progress/[name]" options={{ title: 'Progress', headerRight: menu }} />
         <Stack.Screen name="profile" options={{ title: 'Your profile' }} />
         <Stack.Screen name="bar-weights" options={{ title: 'Bar weights' }} />
       </Stack.Protected>

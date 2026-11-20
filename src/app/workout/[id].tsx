@@ -30,7 +30,10 @@ import {
   type NewExercise,
 } from '@/data/exerciseRepo';
 import { EQUIPMENT_HINT, EQUIPMENT_LABEL, formatSetFor, shortSetFor } from '@/domain/equipment';
+import { suggestNext } from '@/domain/suggestions';
+import type { TrainingWorkout } from '@/domain/training';
 import { checkWeight, typicalKg, type WeightDoubt } from '@/domain/weightCheck';
+import { loadTraining } from '@/data/analysisRepo';
 import { deleteWorkout, endWorkout, getWorkout, renameWorkout } from '@/data/workoutRepo';
 import { correctionKey, muscleOf, searchExercises, type MatchContext } from '@/domain/exerciseCatalog';
 import { bestTranscript, parseExerciseChoice, type ChosenPart } from '@/domain/exerciseChoice';
@@ -103,6 +106,7 @@ export default function WorkoutScreen() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Map<string, string>>(new Map());
+  const [past, setPast] = useState<TrainingWorkout[]>([]);
   const [usual, setUsual] = useState<{ exerciseId: string; kg: number | null } | null>(null);
   const [doubt, setDoubt] = useState<Doubt | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -163,13 +167,15 @@ export default function WorkoutScreen() {
         listExercises(db, userId, id),
         recentExerciseNames(db, userId),
         getCorrections(db, userId),
+        loadTraining(db, userId),
       ])
-        .then(([loadedWorkout, loaded, names, fixes]) => {
+        .then(([loadedWorkout, loaded, names, fixes, training]) => {
           if (cancelled) return;
           setWorkout(loadedWorkout);
           setExercises(loaded);
           setHistory(names);
           setCorrections(fixes);
+          setPast(training.filter((w) => w.id !== id && w.endedAt !== null));
         })
         .catch(() => {
           if (!cancelled) setError('This workout could not be loaded.');
@@ -507,6 +513,14 @@ export default function WorkoutScreen() {
     .sort()
     .at(-1);
   const suggestions = mode === 'choose' && typed.trim().length >= 2 ? searchExercises(typed, history) : [];
+  // Requirement 16: what usually comes next on a day like this one.
+  const next =
+    mode === 'choose' && exercises.length > 0
+      ? suggestNext(
+          exercises.map((e) => ({ name: e.name, muscle: e.muscle })),
+          past,
+        )
+      : null;
   const previous = target?.sets.at(-1) ?? null;
   const autoTitle = workoutTitle(exercises.map((e) => ({ name: e.name, muscle: e.muscle, sets: e.sets.length })));
   const shownTitle = workout.title ?? autoTitle;
@@ -706,6 +720,25 @@ export default function WorkoutScreen() {
                       <Ionicons color={theme.accent} name="arrow-forward-circle" size={24} />
                     </Pressable>
                   ))}
+                </View>
+              )}
+              {suggestions.length === 0 && next && next.options.length > 0 && !typed && (
+                <View style={styles.recentBlock}>
+                  <Text style={[styles.eyebrow, { color: theme.accent }]}>
+                    SUGGESTED NEXT · {next.focus.toUpperCase()}
+                  </Text>
+                  <View style={styles.chips}>
+                    {next.options.map((option) => (
+                      <Chip
+                        key={option.name}
+                        accessibilityLabel={`Suggested: start ${option.name}`}
+                        disabled={saving || speech.listening}
+                        icon="sparkles-outline"
+                        label={option.name}
+                        onPress={() => begin([{ name: option.name, muscle: option.muscle }], null)}
+                      />
+                    ))}
+                  </View>
                 </View>
               )}
               {suggestions.length === 0 && history.length > 0 && !typed && (

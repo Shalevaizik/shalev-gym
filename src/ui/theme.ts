@@ -18,6 +18,13 @@ const light = {
   eat: '#6B716B',
   onEat: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.25)',
+  // Body heat map (requirement 19b), from neglected to possibly overtrained. Each step is also
+  // darker than the last, so the order reads without telling the hues apart.
+  heatNeglected: '#D5DAD4',
+  heatMaintaining: '#5DBE85',
+  heatGrowing: '#2F6FC4',
+  heatOvertrained: '#5A2595',
+  bodyNeutral: '#ECEEEA',
 };
 
 const dark: typeof light = {
@@ -37,6 +44,12 @@ const dark: typeof light = {
   eat: '#3E443E',
   onEat: '#E4E8E3',
   overlay: 'rgba(0, 0, 0, 0.5)',
+  // In dark mode more training is brighter.
+  heatNeglected: '#363C36',
+  heatMaintaining: '#3E9A66',
+  heatGrowing: '#5C9CEB',
+  heatOvertrained: '#D2B0FA',
+  bodyNeutral: '#262A26',
 };
 
 export type Theme = typeof light;

@@ -95,6 +95,10 @@ const MIGRATIONS = [
     PRIMARY KEY (user_id, exercise)
   );
   `,
+  // The last monthly summary the trainer opened, so a new one is announced once (requirement 12).
+  `
+  ALTER TABLE profiles ADD COLUMN summary_seen_month TEXT;
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {
