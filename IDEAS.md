@@ -38,6 +38,8 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
     - **AI** (AI idea 1, smarter voice logging): understands Hebrew naturally, less to build; needs internet and costs a few agorot per log (about $5 of credit would likely last two testers a couple of months), plus the small online service from Phase 2.
   - Beta on Android: a free test build from the existing EAS "preview" profile, shared as a link (the friend allows "install from unknown sources"). Optional later: Google Play internal testing ($25 one-time) for installs and updates from the Play Store.
   - Each tester's workouts stay on their own phone; no running costs without AI.
+  - Before the first beta install, set up **automatic updates** (EAS Update): later changes, including adding AI, reach the friend's app the next time it opens, with no new link or reinstall. Free on Expo's free plan at this scale. It must be in the app from the first install, since updates only reach an app that can receive them. Changes that add native pieces (e.g. camera features) still need a new install link; installing over the old app keeps the friend's workouts.
+  - **Back up the Android signing key** (the keystore and its passwords, kept on Shalev's computer, never on GitHub) somewhere safe, e.g. a password manager or a private cloud folder. Android only accepts updates signed with the same key: if it's lost, testers must uninstall (losing their workouts) and install fresh.
 
 ## Coming soon
 
