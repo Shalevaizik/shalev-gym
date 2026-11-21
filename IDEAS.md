@@ -22,6 +22,7 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - Smart: the user asks the agent to suggest today's workout and sets how much time they have (e.g. 45 minutes).
   - The agent looks at what was already trained this week and suggests a workout type (e.g. legs) with a list of exercises that fits the time.
   - The user controls the list: reorder exercises (e.g. when a machine is busy), and remove, add or swap exercises.
+  - Machine busy: the user taps "busy" and the agent offers a variation that works the same muscles at the same intensity, with a matching working weight (e.g. leg press busy → hack squat; cable fly busy → dumbbell fly). The user can also choose to just do it later instead.
   - Suggests a working weight for each exercise, based on the user's history.
   - The time covers everything: the agent plans a full package (warm-up, exercises, sets, rest, and cardio if wanted) that fits inside it.
   - No automatic cutting of exercises when running behind schedule.
