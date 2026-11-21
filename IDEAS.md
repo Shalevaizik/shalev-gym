@@ -7,6 +7,15 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
 ## New ideas
 
 - 2026-11-20: Log cardio and conditioning sessions too, not only reps/weight or time/weight exercises. For example 15 minutes of HIIT, CrossFit or walking on the treadmill at the start of a workout.
+- 2026-11-21: AI agent features (an AI like Claude built into the app). Ideas, most useful first:
+  1. Smarter voice logging: understand messy, natural speech ("three sets of bench, 20 a side, last one I failed at 7", "same as last week but 2.5 heavier") and fix misheard words from context.
+  2. Ask your training history: a chat in Analyse ("When did I last train legs?", "How has my bench changed since September?").
+  3. Personal coach: suggest today's plan and weights from your progress and recovery ("try 27.5 a side today", "legs haven't been trained for 9 days").
+  4. Monthly summary written like a coach: personal advice in plain words, next to the heat map and numbers.
+  5. Eat section: photo of a meal → estimated calories and protein, linked to the day's training.
+  6. Check-ins: nudges based on habits ("you usually train Tuesdays", "three weeks at the same bench weight").
+
+  Needs internet, a small online service to keep the AI key out of the app (goes with the Phase 2 Supabase work), and a small running cost per use. Suggested start: 1 or 2.
 
 ## Parked
 
