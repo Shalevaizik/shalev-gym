@@ -28,6 +28,16 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - No automatic cutting of exercises when running behind schedule.
   - Needs internet; cellular data is enough. Without any signal, Manual workout still works.
   - A concrete version of AI idea 3 (Personal coach).
+- 2026-11-21: Hebrew version of the app, same functionality, for beta testing with a friend (Android). Could be version 1.4.0.
+  - One app with a language choice (Hebrew / English) in the profile menu, defaulting to the phone's language. Not a separate app, so every feature reaches both languages.
+  - Translate all screen text (about 18 screen files) and the exercise list (100+ names). Exercise names need care: Israeli gyms mix Hebrew and English (e.g. "לחיצת חזה" vs "בנץ' פרס").
+  - Right-to-left layout: flip screens, lists, arrows, progress charts and the body map, and check every screen.
+  - Hebrew dates and numbers (e.g. "יום שישי, 27 בנובמבר").
+  - Voice logging, the biggest piece: switch speech recognition to Hebrew (`src/voice/useSpeechToText.ts`, currently `en-US`), then teach the app to understand Hebrew phrases ("עשרים כל צד", "דקה וחצי", numbers spoken as words). Two ways, to decide:
+    - **Rules** written in the app, like today's English ones in `src/domain/exerciseLog.ts`: free to run, works offline, more work to build.
+    - **AI** (AI idea 1, smarter voice logging): understands Hebrew naturally, less to build; needs internet and costs a few agorot per log (about $5 of credit would likely last two testers a couple of months), plus the small online service from Phase 2.
+  - Beta on Android: a free test build from the existing EAS "preview" profile, shared as a link (the friend allows "install from unknown sources"). Optional later: Google Play internal testing ($25 one-time) for installs and updates from the Play Store.
+  - Each tester's workouts stay on their own phone; no running costs without AI.
 
 ## Coming soon
 
