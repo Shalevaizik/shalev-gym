@@ -42,3 +42,8 @@ yarn-error.*
 
 # requirements source document, not for publishing
 /App Req.docx
+
+# Android signing key and its passwords: never upload (the GitHub copy is public)
+*.keystore
+credentials.json
+credentials/
