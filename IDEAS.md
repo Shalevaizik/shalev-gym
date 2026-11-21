@@ -22,6 +22,10 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - Smart: the user asks the agent to suggest today's workout and sets how much time they have (e.g. 45 minutes).
   - The agent looks at what was already trained this week and suggests a workout type (e.g. legs) with a list of exercises that fits the time.
   - The user controls the list: reorder exercises (e.g. when a machine is busy), and remove, add or swap exercises.
+  - Suggests a working weight for each exercise, based on the user's history.
+  - The time covers everything: the agent plans a full package (warm-up, exercises, sets, rest, and cardio if wanted) that fits inside it.
+  - No automatic cutting of exercises when running behind schedule.
+  - Needs internet; cellular data is enough. Without any signal, Manual workout still works.
   - A concrete version of AI idea 3 (Personal coach).
 
 ## Parked
