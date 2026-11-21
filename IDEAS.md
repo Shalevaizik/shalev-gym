@@ -18,6 +18,11 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   Needs internet, a small online service to keep the AI key out of the app (goes with the Phase 2 Supabase work), and a small running cost per use. Suggested start: 1 or 2.
 - 2026-11-21: A "Shalev's personal trainer" skill for Claude: a written briefing Claude reads before coaching. It covers goals, experience, limits, schedule and equipment; training style (cardio warm-up then weights, voice logging, heavy-rock music); how to coach and progress weights, and plan around races (like the Lehavim 3K); and how to read the workout history from this app. Could later be the brain behind the in-app Personal coach (AI idea 3).
 - 2026-11-21: Base the coaching on Shalev's weightlifting books (PDFs). Keep the PDFs in a separate **private** repo (this repo is public, so the books can't go here). Claude reads them once and writes the key principles into the trainer skill (programming, progression, technique cues), noting the book and chapter for each.
+- 2026-11-21: "New workout" offers two choices: **Manual workout** (same as today) or **Smart workout** (AI).
+  - Smart: the user asks the agent to suggest today's workout and sets how much time they have (e.g. 45 minutes).
+  - The agent looks at what was already trained this week and suggests a workout type (e.g. legs) with a list of exercises that fits the time.
+  - The user controls the list: reorder exercises (e.g. when a machine is busy), and remove, add or swap exercises.
+  - A concrete version of AI idea 3 (Personal coach).
 
 ## Parked
 
