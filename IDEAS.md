@@ -35,6 +35,7 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - The user picks a workout they did and challenges a friend. The friend gets a message, e.g. "Shalev has challenged you to beat his Push day today, are you up for it?"
   - If the friend accepts, their app pulls in Shalev's Push workout log and sets it up for them in the **Smart workout** section, ready to start.
   - Needs user accounts, friends and online syncing, so it comes after the Phase 2 (Supabase) work.
+  - Until it's built, show it in the app as a **"Coming soon"** button on the start screen, like the Eat button (e.g. "Challenges: Challenge your friends"). Tapping it shows a short "coming in a later version" message.
   - To decide: what "beating" it means (more total weight lifted, more reps, or the same exercises faster) and whether weights are copied as-is or adjusted to the friend's level.
 
 ## Parked
