@@ -29,6 +29,14 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - Needs internet; cellular data is enough. Without any signal, Manual workout still works.
   - A concrete version of AI idea 3 (Personal coach).
 
+## Coming soon
+
+- 2026-11-21: Share workouts and challenge friends.
+  - The user picks a workout they did and challenges a friend. The friend gets a message, e.g. "Shalev has challenged you to beat his Push day today, are you up for it?"
+  - If the friend accepts, their app pulls in Shalev's Push workout log and sets it up for them in the **Smart workout** section, ready to start.
+  - Needs user accounts, friends and online syncing, so it comes after the Phase 2 (Supabase) work.
+  - To decide: what "beating" it means (more total weight lifted, more reps, or the same exercises faster) and whether weights are copied as-is or adjusted to the friend's level.
+
 ## Parked
 
 Ideas that were discussed and set aside for now, with the reason.
