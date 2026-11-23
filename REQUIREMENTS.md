@@ -66,7 +66,7 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - b. Dumbbells (pair): the user says the weight of one dumbbell. The app shows the pair and the total, e.g. "2 × 20 kg · 40 kg total", and counts 40 kg for progress and volume
     - c. Single dumbbell (e.g. one-arm dumbbell row): the weight of the one dumbbell
     - d. Machine or cable: the weight as shown on the machine
-    - e. Plate-loaded machine (e.g. leg press): the weight per side, like a barbell
+    - e. Plate-loaded machine (e.g. leg press): the weight per side, like a barbell. The app shows the plates total too, e.g. "40 kg per side · 80 kg plates" (the machine's own sled weight isn't known)
     - f. Bodyweight (e.g. pull-ups, dips, plank): bodyweight, with or without added weight (per requirement No. 14). The app will ask the user for their body weight once a month, to include it in progress and volume
     - g. The app will keep what the user said together with the calculated total, so PRs and volume per muscle group (requirement No. 13) are compared correctly across equipment types
 18. App structure. When the app opens, the user sees three large buttons:

@@ -4,6 +4,8 @@ Each version of the app, newest first, with what it contains in plain words.
 
 While the app is still in development, versions are numbered **1.x.0**: the first number stays **1** ("in development") and the middle number goes up with each version (1.1.0, 1.2.0, 1.3.0 …). It moves to 2.0.0 once the app is fully developed.
 
+Bugs are collected in [BUGS.md](BUGS.md). When a version is built, the bugs fixed for it move from BUGS.md into that version's entry below, under "Bugs fixed", and BUGS.md starts empty again.
+
 The version number lives in `app.json` (`expo.version`) and is shown by the phone in the app's settings. Each finished version also gets a label (tag) on GitHub, e.g. `v1.2.0`, so it can always be found and opened again. Android's internal build number (`versionCode`) is separate and goes up automatically with each production build.
 
 ## 1.3.0: in development

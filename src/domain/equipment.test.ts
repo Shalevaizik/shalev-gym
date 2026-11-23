@@ -44,6 +44,11 @@ describe('formatSetFor', () => {
     expect(formatSetFor(set(null, null, 12), BARBELL)).toBe('Empty bar (20 kg) × 12 reps');
   });
 
+  it('shows a plate-loaded machine as weight per side with the plates total', () => {
+    const PLATES: ExerciseKind = { equipment: 'plates', measure: 'reps', barKg: null };
+    expect(formatSetFor(set(40, 'kg', 10), PLATES)).toBe('40 kg per side · 80 kg plates × 10 reps');
+  });
+
   it('shows dumbbells as a pair with the total', () => {
     expect(formatSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2 × 20 kg · 40 kg total × 10 reps');
     expect(formatSetFor(set(12, 'kg', 12), DUMBBELLS)).toBe('2 × 12 kg · 24 kg total × 12 reps');

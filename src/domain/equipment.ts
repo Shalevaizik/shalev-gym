@@ -146,7 +146,8 @@ export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
     case 'barbell':
       return `${trim(weight)} ${unit} per side · ${trim(2 * weight + barIn(unit, bar))} ${unit} total`;
     case 'plates':
-      return `${trim(weight)} ${unit} per side`;
+      // The machine's own sled weight isn't known, so the total is the plates only.
+      return `${trim(weight)} ${unit} per side · ${trim(2 * weight)} ${unit} plates`;
     case 'dumbbells':
       return `2 × ${trim(weight)} ${unit} · ${trim(2 * weight)} ${unit} total`;
     case 'bodyweight':
