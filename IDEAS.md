@@ -4,6 +4,12 @@ Ideas for future improvements, written down as they come up, including from the 
 
 Add each idea as a new line under **New ideas**, with the date. A few words are enough.
 
+## Guiding principle
+
+**Flexibility first** (2026-11-23). The app adapts to the user's real training: what was trained, when and how hard, which muscles need work, how much time there is today, and what equipment is free right now. No fixed templates or preset checkboxes, and the user can always change the plan. Every idea below is checked against this.
+
+Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset set of checkboxes and don't really take previous workouts or targeted muscle groups into account. That's the gap this app fills.
+
 ## New ideas
 
 - 2026-11-20: Log cardio and conditioning sessions too, not only reps/weight or time/weight exercises. For example 15 minutes of HIIT, CrossFit or walking on the treadmill at the start of a workout.
