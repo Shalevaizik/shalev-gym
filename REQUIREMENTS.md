@@ -71,14 +71,14 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - g. The app will keep what the user said together with the calculated total, so PRs and volume per muscle group (requirement No. 13) are compared correctly across equipment types
 18. App structure. When the app opens, the user sees three large buttons:
     - a. Workout (green):
-      - Start a new workout
-      - See previous workouts
+      - Start a new workout, or "Continue workout" when one is in progress
+      - See previous workouts, beneath it
     - b. Analyse (blue):
       - Workout summary (per requirement No. 11)
       - Monthly summary (per requirements No. 12, 13 and 19)
       - Progress per exercise over time
     - c. Eat (grey): marked "Coming soon" and shows a short "Coming soon" message when tapped
-    - d. If a workout is in progress, the Workout button shows "Continue workout" and goes straight back to it
+    - d. The start screen always shows Workout, Analyse and Eat. The Workout button always opens the Workout screen (18a). If a workout is in progress, the Workout button says so ("In progress · started at …"), and on the Workout screen the top button reads "Continue workout" and goes straight back to it
     - e. A menu button (☰) in the top-right corner of the app opens a drop-down menu with the user's profile (requirement No. 20) and settings: bar weights and sign-out
 19. The Monthly summary will open with a body heat map:
     - a. Front and back views of the body, each muscle group coloured by the number of hard sets it got that month

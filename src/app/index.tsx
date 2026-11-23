@@ -135,21 +135,9 @@ export default function Start() {
           detail={active ? `In progress · started at ${formatTime(active.startedAt)}` : 'Start a workout or see past ones'}
           foreground={theme.onAccent}
           icon="barbell"
-          label={active ? 'Continue workout' : 'Workout'}
-          onPress={() =>
-            active ? router.push({ pathname: '/workout/[id]', params: { id: active.id } }) : router.push('/workout')
-          }
+          label="Workout"
+          onPress={() => router.push('/workout')}
         />
-        {active && (
-          // While a workout runs, the big button goes straight back to it, so this is the way to
-          // the workout history.
-          <Button
-            icon="time-outline"
-            label="Previous workouts"
-            onPress={() => router.push('/workout/history')}
-            variant="plain"
-          />
-        )}
         <SectionButton
           background={theme.analyse}
           detail="Summaries, monthly report and progress"
