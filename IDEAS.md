@@ -54,6 +54,8 @@ Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset
 
 ## Design
 
+Not in 1.3.0: design changes come in a future version (Shalev, 2026-11-23).
+
 - 2026-11-23: A new look, based on three reference designs in Shalev's Google Drive folder "design ideas" (images 1–3 and the "Personal Touch" notes). What Shalev liked: the colour palettes, the "milky" screens and tiles, the tile arrangements, and the infographics.
   - **Milky glass tiles:** translucent, frosted cards over a dark background or photo, instead of today's flat white cards.
   - **Dark first,** with one strong accent colour. The references use electric blue (1), lime green (2) and orange (3). To decide: which accent, and whether to keep a light mode.
