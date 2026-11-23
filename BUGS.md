@@ -11,7 +11,7 @@ How it works:
 ## Open
 
 - 2026-11-23: While a workout is running, there's no way to reach **Previous workouts**. The start screen's Workout button skips the Workout menu and goes straight back to the running workout (requirement 18d), and "Previous workouts" is only on that menu. The workout screen has no link to it either.
-  - Suggested fix: add **Previous workouts** to the ☰ menu (top right), which is on every main screen, including the running workout. Reachable from anywhere in one or two taps, without adding buttons to the workout screen (requirement 22 keeps that screen uncluttered).
+  - Not in the ☰ menu: previous workouts aren't important enough for that menu (Shalev). Fix to be decided.
   - Until then, past workouts can be seen from the start screen → Analyse → Workout summary.
 
 ## Fixed, waiting for the next build
