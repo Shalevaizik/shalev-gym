@@ -46,6 +46,18 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - Before using any model: check its license (some are personal or non-commercial use only), test its quality on real voice and video, and compare running costs (Hugging Face paid hosting vs. a small model on the phone).
   - Optional: finish the Hugging Face connector sign-in on claude.ai (Settings → Connectors) so Claude can search and compare models.
 
+## Design
+
+- 2026-11-23: A new look, based on three reference designs in Shalev's Google Drive folder "design ideas" (images 1–3 and the "Personal Touch" notes). What Shalev liked: the colour palettes, the "milky" screens and tiles, the tile arrangements, and the infographics.
+  - **Milky glass tiles:** translucent, frosted cards over a dark background or photo, instead of today's flat white cards.
+  - **Dark first,** with one strong accent colour. The references use electric blue (1), lime green (2) and orange (3). To decide: which accent, and whether to keep a light mode.
+  - **Infographics:** big numbers, progress rings and gauges (e.g. "75% of this week's goal"), streaks, small charts, and stat tiles (calories, duration, workouts done this week).
+  - **Tile grid:** stats in tiles of different sizes (like reference 2's 58 min / 176 bpm / 3.24 km), e.g. for the workout summary and the start screen.
+  - Rounded pill buttons, rows of icons, and possibly a bottom tab bar (reference 3). Reference 3 also has an "Ask me anything" box, which fits AI idea 2 (ask your training history).
+  - Start with the start screen, the workout screen and Analyse; one shared set of colours and tiles in `src/ui/theme.ts` so every screen follows.
+  - Check: text must stay easy to read in a bright gym and with sweaty hands (contrast, big tap targets); frosted blur can be slow on older Android phones, so have a plain fallback; it must also work right to left for the Hebrew version.
+  - The references are other people's designs: use them for style, not copied. Any athlete photos must be our own or free to use.
+
 ## Coming soon
 
 - 2026-11-21: Share workouts and challenge friends.
