@@ -108,7 +108,8 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - d. Optionally, the user can tap a title to rename it (e.g. "Deload day")
 22. The workout session screen (a running workout) will fit the phone's screen and aspect ratio:
     - a. It fits the full width of the screen on any phone size and shape (e.g. tall 20:9 and shorter 16:9 phones), with nothing cut off at the sides and no sideways scrolling
-    - b. The main controls stay visible on screen without scrolling: the timer, the current exercise, the microphone button and the text input. Long lists (logged exercises and sets, suggestions) scroll inside the screen
-    - c. Nothing is hidden behind the phone's notch, camera cut-out, status bar or bottom navigation bar
-    - d. When the keyboard opens for typing, the text input and its button stay visible above it
-    - e. Text and buttons keep a readable size and big enough tap targets on small phones, and use the extra space on large ones
+    - b. The whole screen fits without scrolling up or down. Everything needed to log the next set is visible at once: the timer, the current exercise, the microphone button, and the manual set input (weight, reps or time, and the button to save the set)
+    - c. The log of the session so far (exercises done and their sets) moves to a separate screen, opened with a button on the workout screen (e.g. "Session log") and closed with a back button that returns straight to logging. The workout screen shows only a short line about the last set saved (e.g. "Last: Bench Press, 20 per side × 8"), so the user knows it was logged
+    - d. Nothing is hidden behind the phone's notch, camera cut-out, status bar or bottom navigation bar
+    - e. When the keyboard opens for typing, the text input and its button stay visible above it
+    - f. Text and buttons keep a readable size and big enough tap targets on small phones, and use the extra space on large ones
