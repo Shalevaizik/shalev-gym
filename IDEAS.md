@@ -63,6 +63,13 @@ Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset
   - Start with the start screen, the workout screen and Analyse; one shared set of colours and tiles in `src/ui/theme.ts` so every screen follows.
   - Check: text must stay easy to read in a bright gym and with sweaty hands (contrast, big tap targets); frosted blur can be slow on older Android phones, so have a plain fallback; it must also work right to left for the Hebrew version.
   - The references are other people's designs: use them for style, not copied. Any athlete photos must be our own or free to use.
+- 2026-11-23: A realistic body map, based on four new references in the "design ideas" folder ("body 1 male", "Body map 2- male", "Body map 3- female", "Body map 4- female").
+  - Today's heat map (requirement 19, `src/ui/BodyMap.tsx`) draws the body from rounded rectangles. The references show a real body outline with each muscle drawn in its true shape: front and back (reference 3 also has a side view), with the worked muscles coloured and the rest grey.
+  - **Male and female bodies:** show the one that matches the sex in the user's profile (requirement 20a).
+  - **More detailed muscles** where it helps training decisions, e.g. lats vs. traps, front vs. side vs. rear shoulders, glutes, hamstrings and calves. Reference 2 labels individual muscles; that much anatomy is probably too much for the app, but a muscle could show its name when tapped (requirement 19d).
+  - **A recovery view** (reference 4, a dark screen): the body coloured by how recently each muscle was trained, with "days since your last workout" and "fresh muscle groups" counts, and a Start workout button. Fits the guiding principle (flexibility first) and the Smart workout: the user sees which muscles are ready before choosing today's workout.
+  - Fits the Design idea above: dark background, one accent colour for the worked muscles.
+  - References 1–3 are stock images (Adobe Stock and Alamy watermarks) and reference 4 is from another app: use them for style only. The body drawing must be drawn for this app or come from a source that's free to use.
 
 ## Coming soon
 
