@@ -62,7 +62,7 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
 
     The user can pick a suggestion with one tap or ignore it and say or type any other exercise.
 17. The app will know the equipment type of each exercise and understand and show the working weight accordingly:
-    - a. Barbell: the user says the weight per side (e.g. "20 a side", "two plates"). The app adds the bar's own weight (20 kg by default, adjustable per exercise, e.g. EZ bar or Smith machine) and shows both, e.g. "20 per side (60 kg total)"
+    - a. Barbell: the user says the weight per side (e.g. "20 a side", "two plates"). The app adds the bar's own weight (20 kg by default, adjustable per exercise, e.g. EZ bar or Smith machine) and shows both, e.g. "20 per side (60 kg total)". The bar is picked from Olympic bar (20 kg), EZ bar (10 kg) or Other (any weight, e.g. a Smith machine); saying "EZ bar" picks the EZ bar
     - b. Dumbbells (pair): the user says the weight of one dumbbell. The app shows the pair and the total, e.g. "2 × 20 kg · 40 kg total", and counts 40 kg for progress and volume
     - c. Single dumbbell (e.g. one-arm dumbbell row): the weight of the one dumbbell
     - d. Machine or cable: the weight as shown on the machine

@@ -17,6 +17,8 @@ import {
 import { useAuth } from '@/auth/AuthProvider';
 import { deleteExercise, getExercise, updateExercise } from '@/data/exerciseRepo';
 import {
+  BAR_TYPES,
+  barTypeFor,
   DEFAULT_BAR_KG,
   EQUIPMENT_LABEL,
   formatSetFor,
@@ -295,12 +297,38 @@ export default function EditExerciseScreen() {
           )}
           {equipment === 'barbell' && (
             <View style={styles.barRow}>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Bar</Text>
+              <View style={styles.chips}>
+                {BAR_TYPES.map((option) => (
+                  <Chip
+                    key={option.type}
+                    label={`${option.label} · ${option.kg} kg`}
+                    onPress={() => setBar(String(option.kg))}
+                    selected={barTypeFor(Number(bar.replace(',', '.'))) === option.type}
+                    theme={theme}
+                  />
+                ))}
+                <Chip
+                  label="Other"
+                  onPress={() => {
+                    if (barTypeFor(Number(bar.replace(',', '.'))) !== 'other') setBar('');
+                  }}
+                  selected={barTypeFor(Number(bar.replace(',', '.'))) === 'other'}
+                  theme={theme}
+                />
+              </View>
+            </View>
+          )}
+          {equipment === 'barbell' && (
+            <View style={styles.barRow}>
               <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Bar weight (kg)</Text>
               <TextInput
                 accessibilityLabel="Bar weight in kg"
                 inputMode="decimal"
                 keyboardType="decimal-pad"
                 onChangeText={setBar}
+                placeholder="e.g. 15"
+                placeholderTextColor={theme.textMuted}
                 style={[inputStyle, styles.barInput]}
                 value={bar}
               />

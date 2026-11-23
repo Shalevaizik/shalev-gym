@@ -12,9 +12,9 @@ The version number lives in `app.json` (`expo.version`) and is shown by the phon
 
 Started 2026-11-21. Not finished yet, so no GitHub label yet.
 
-Planned for this version (not done yet):
+Planned for this version:
 
-- Fix all open bugs in [BUGS.md](BUGS.md): a "Previous workouts" link while a workout is running, an EZ bar choice for barbell exercises, buttons hidden behind Android's navigation bar, and a green "Yes, end workout" button.
+- Fix all open bugs in [BUGS.md](BUGS.md): a "Previous workouts" link while a workout is running, an EZ bar choice for barbell exercises, buttons hidden behind Android's navigation bar, and a green "Yes, end workout" button. Done 2026-11-23; they're listed under "Fixed, waiting for the next build" until 1.3.0 is built.
 
 - Android builds from the shalevai Expo account.
 - Protection against uploading Android signing keys or their passwords to GitHub.

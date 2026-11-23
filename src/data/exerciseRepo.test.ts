@@ -239,6 +239,19 @@ describe('exerciseRepo', () => {
       expect(await getExercise(db, 'alice', id)).toMatchObject({ equipment: 'barbell', barKg: 15 });
     });
 
+    it('uses an EZ bar when the trainer says so', async () => {
+      const [id] = await startExercise(
+        db,
+        'alice',
+        'w1',
+        [{ name: 'Skull Crusher', muscle: 'Triceps', kind: { equipment: 'barbell', measure: 'reps', barKg: 20 } }],
+        'Easy Bar skull crusher',
+        minutes(1),
+        newId,
+      );
+      expect((await getExercise(db, 'alice', id))?.barKg).toBe(10);
+    });
+
     it('uses the trainer’s own bar weight for an exercise', async () => {
       await setBarWeight(db, 'alice', 'Bench Press', 25);
       const [id] = await startExercise(db, 'alice', 'w1', [{ name: 'Bench Press', muscle: 'Chest' }], null, minutes(1), newId);

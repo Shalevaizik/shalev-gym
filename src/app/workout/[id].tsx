@@ -939,7 +939,7 @@ export default function WorkoutScreen() {
                   {plural(exercises.reduce((n, e) => n + e.sets.length, 0), 'set')} in{' '}
                   {formatDuration(durationMs(workout, now))}.
                 </Text>
-                <Button busy={ending} icon="flag" label="Yes, end workout" onPress={end} variant="danger" />
+                <Button busy={ending} icon="flag" label="Yes, end workout" onPress={end} variant="primary" />
                 <Button disabled={ending} label="Keep going" onPress={() => setConfirmingEnd(false)} variant="secondary" />
               </View>
             ) : (

@@ -10,23 +10,16 @@ How it works:
 
 ## Open
 
-All four bugs below are planned for version 1.3.0 (Shalev, 2026-11-23). The Session log button in the first bug comes with requirement 22.
-
-- 2026-11-23: While a workout is running, there's no way to reach **Previous workouts**. The start screen's Workout button skips the Workout menu and goes straight back to the running workout (requirement 18d), and "Previous workouts" is only on that menu. The workout screen has no link to it either.
-  - Fix (chosen by Shalev): while a workout is running, the start screen shows a small **"Previous workouts"** link under the "Continue workout" button. The big button still goes straight back to the workout in one tap (requirement 18d); the link only appears while a workout is running. Not in the ☰ menu: previous workouts aren't important enough for that menu.
-  - Also (chosen by Shalev): a **"Previous workouts"** button at the bottom of the Session log screen (requirement 22c), to compare this session with past ones. This part comes with requirement 22, since that screen doesn't exist yet.
-  - Until then, past workouts can be seen from the start screen → Analyse → Workout summary.
-- 2026-11-23: No **EZ bar** option when editing a barbell exercise. Said "Easy Bar skull crusher": the app picked Skull Crusher, Barbell, bar weight 10 kg (the EZ bar default), but nothing says it's an EZ bar, and "EZ" was dropped from what was heard. The bar weight is a bare number, so the bar type is invisible.
-  - Suggested fix: under Barbell, a **Bar** choice: Olympic bar (20 kg), EZ bar (10 kg), Smith machine, or Other (type the weight). Saying "EZ bar" or "easy bar" with any barbell exercise picks the EZ bar.
-- 2026-11-23: On the Edit exercise screen, the **Delete exercise** button sits behind Android's bottom navigation bar (back / home / recent buttons), so it's hard to see and tap. Same kind of problem as requirement 22d.
-  - Also seen on the running workout screen: **Delete workout** at the bottom is half hidden behind the navigation bar.
-  - Suggested fix: keep the screen's content above the navigation bar on every screen, so the last button can always be scrolled into view.
-- 2026-11-23: When ending a workout, the **"Yes, end workout"** button is red. It should be **green**: finishing a workout is a good thing, not a danger. Red stays for deleting (Delete workout, Delete exercise).
-  - Suggested fix: make "Yes, end workout" the app's green main button.
+(none)
 
 ## Fixed, waiting for the next build
 
 These go into version 1.3.0.
+
+- 2026-11-23: While a workout was running, there was no way to reach Previous workouts. Now the start screen shows a small "Previous workouts" link under "Continue workout" while a workout is running; the big button still goes straight back to the workout. Still to come with requirement 22: a "Previous workouts" button at the bottom of the Session log screen.
+- 2026-11-23: No EZ bar option for barbell exercises. Now the edit screen has a **Bar** choice: Olympic bar (20 kg), EZ bar (10 kg) or Other (type the weight, e.g. a Smith machine). Saying "EZ bar" or "easy bar" (e.g. "Easy Bar skull crusher") picks the EZ bar for that exercise.
+- 2026-11-23: Buttons at the bottom of screens (Delete exercise, Delete workout) were hidden behind Android's navigation bar. Now every screen stops above the navigation bar. (Checked in code; it can only be seen on an Android phone, so check it after the next build.)
+- 2026-11-23: "Yes, end workout" was red. Now it's the app's green main button; red stays for deleting.
 
 - 2026-11-23: Dumbbell sets showed only "2 × 12 kg", without the total, while barbell sets show it ("20 kg per side · 60 kg total"). Now: "2 × 12 kg · 24 kg total × 12 reps" (on the "Same again" chip: "2×12=24 kg × 12"). The weight was always stored and counted correctly; only the display was missing the total.
 - 2026-11-23: An exercise name spelled "dumbell" (one b), as voice recognition sometimes writes it, was treated as a machine exercise. It's now recognised as a dumbbell exercise.

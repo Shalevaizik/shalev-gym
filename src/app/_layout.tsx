@@ -3,7 +3,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { DATABASE_NAME, migrate } from '@/data/db';
@@ -16,6 +16,10 @@ const menu = () => <AppMenu />;
 function Routes() {
   const { loading, user } = useAuth();
   const theme = useTheme();
+  // Android draws the app behind its navigation bar (back, home, recent apps), so every screen
+  // stops above it and the last button can always be reached. iOS screens adjust for this themselves.
+  const { bottom } = useSafeAreaInsets();
+  const navBarSpace = process.env.EXPO_OS === 'android' ? bottom : 0;
 
   if (loading) {
     return (
@@ -37,7 +41,7 @@ function Routes() {
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: theme.background },
+        contentStyle: { backgroundColor: theme.background, paddingBottom: navBarSpace },
       }}>
       <Stack.Protected guard={user !== null}>
         <Stack.Screen name="index" options={{ title: 'Shalev Gym', headerRight: menu }} />

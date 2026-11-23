@@ -1,4 +1,12 @@
-import { formatSetFor, kindFor, loadKg, shortSetFor, type ExerciseKind } from './equipment';
+import {
+  barTypeFor,
+  formatSetFor,
+  kindFor,
+  loadKg,
+  saysEzBar,
+  shortSetFor,
+  type ExerciseKind,
+} from './equipment';
 import type { ParsedSet } from './exerciseLog';
 
 const set = (weight: number | null, unit: 'kg' | 'lb' | null, reps: number | null, durationS?: number): ParsedSet => ({
@@ -91,5 +99,28 @@ describe('loadKg', () => {
     expect(loadKg(set(null, null, 8), BODYWEIGHT, 80)).toBe(80);
     expect(loadKg(set(10, 'kg', 8), BODYWEIGHT, null)).toBe(10);
     expect(loadKg(set(null, null, 8), BODYWEIGHT, null)).toBeNull();
+  });
+});
+
+describe('EZ bar', () => {
+  it('hears "EZ bar" in what the trainer said, however it was written', () => {
+    expect(saysEzBar('Easy Bar skull crusher')).toBe(true);
+    expect(saysEzBar('EZ bar curl')).toBe(true);
+    expect(saysEzBar('e-z bar curls')).toBe(true);
+    expect(saysEzBar('ezbar skull crusher')).toBe(true);
+    expect(saysEzBar('skull crusher')).toBe(false);
+    expect(saysEzBar('easy does it, bench press')).toBe(false);
+    expect(saysEzBar(null)).toBe(false);
+  });
+
+  it('gives an exercise named with an EZ bar the 10 kg bar', () => {
+    expect(kindFor('Easy Bar Skull Crusher')).toEqual({ equipment: 'barbell', measure: 'reps', barKg: 10 });
+  });
+
+  it('names the bar type from its weight', () => {
+    expect(barTypeFor(20)).toBe('olympic');
+    expect(barTypeFor(10)).toBe('ez');
+    expect(barTypeFor(15)).toBe('other');
+    expect(barTypeFor(null)).toBe('other');
   });
 });

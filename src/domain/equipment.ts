@@ -27,6 +27,25 @@ export const EQUIPMENT_HINT: Record<Equipment, string> = {
 };
 
 export const DEFAULT_BAR_KG = 20;
+export const EZ_BAR_KG = 10;
+
+// The bars a trainer picks from (requirement 17a). Anything else, such as a Smith machine, is
+// "Other" with its own weight.
+export type BarType = 'olympic' | 'ez' | 'other';
+export const BAR_TYPES: { type: Exclude<BarType, 'other'>; label: string; kg: number }[] = [
+  { type: 'olympic', label: 'Olympic bar', kg: DEFAULT_BAR_KG },
+  { type: 'ez', label: 'EZ bar', kg: EZ_BAR_KG },
+];
+
+export function barTypeFor(barKg: number | null): BarType {
+  return BAR_TYPES.find((bar) => bar.kg === barKg)?.type ?? 'other';
+}
+
+// Whether the trainer said they use an EZ bar: "EZ bar", "E-Z bar", or "easy bar" as speech
+// recognition often hears it.
+export function saysEzBar(text: string | null | undefined): boolean {
+  return !!text && /\b(ez|e[ .-]?z|easy)[ -]?bar\b/i.test(text);
+}
 
 export type ExerciseKind = { equipment: Equipment; measure: Measure; barKg: number | null };
 
@@ -112,7 +131,7 @@ export function kindFor(name: string): ExerciseKind {
   else if (measure === 'time' || has(/\b(push ?-?ups?|pull ?-?ups?|chin ?-?ups?|dips?|bodyweight|sit ?-?ups?)\b/)) {
     equipment = 'bodyweight';
   }
-  const barKg = equipment === 'barbell' ? (has(/\bez\b/) ? 10 : DEFAULT_BAR_KG) : null;
+  const barKg = equipment === 'barbell' ? (has(/\bez\b/) || saysEzBar(key) ? EZ_BAR_KG : DEFAULT_BAR_KG) : null;
   return { equipment, measure, barKg };
 }
 

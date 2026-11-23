@@ -1,4 +1,12 @@
-import { DEFAULT_BAR_KG, kindFor, type Equipment, type ExerciseKind, type Measure } from '../domain/equipment';
+import {
+  DEFAULT_BAR_KG,
+  EZ_BAR_KG,
+  kindFor,
+  saysEzBar,
+  type Equipment,
+  type ExerciseKind,
+  type Measure,
+} from '../domain/equipment';
 import {
   estimateSetTimes,
   toKg,
@@ -230,7 +238,12 @@ export async function startExercise(
           at.toISOString(),
           kind.equipment,
           kind.measure,
-          kind.equipment === 'barbell' ? (ownBar?.bar_kg ?? kind.barKg ?? DEFAULT_BAR_KG) : null,
+          kind.equipment === 'barbell'
+            ? // Saying "EZ bar" picks it for this exercise, over the usual bar (requirement 17a).
+              saysEzBar(spokenText)
+              ? EZ_BAR_KG
+              : (ownBar?.bar_kg ?? kind.barKg ?? DEFAULT_BAR_KG)
+            : null,
         ],
       );
       ids.push(id);
