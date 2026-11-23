@@ -28,6 +28,8 @@ describe('kindFor', () => {
   it('guesses custom exercises from their name', () => {
     expect(kindFor('Incline Smith Press').equipment).toBe('barbell');
     expect(kindFor('Seated Dumbbell Curl').equipment).toBe('dumbbells');
+    expect(kindFor('Dumbell Incline Bench Press').equipment).toBe('dumbbells');
+    expect(kindFor('Dumbbell Incline Bench Press').equipment).toBe('dumbbells');
     expect(kindFor('Single Arm Dumbbell Press').equipment).toBe('dumbbell');
     expect(kindFor('Cable Woodchopper').equipment).toBe('machine');
     expect(kindFor('Hollow Body Hold')).toEqual({ equipment: 'bodyweight', measure: 'time', barKg: null });
@@ -42,8 +44,9 @@ describe('formatSetFor', () => {
     expect(formatSetFor(set(null, null, 12), BARBELL)).toBe('Empty bar (20 kg) × 12 reps');
   });
 
-  it('shows dumbbells as a pair', () => {
-    expect(formatSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2 × 20 kg · 10 reps');
+  it('shows dumbbells as a pair with the total', () => {
+    expect(formatSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2 × 20 kg · 40 kg total × 10 reps');
+    expect(formatSetFor(set(12, 'kg', 12), DUMBBELLS)).toBe('2 × 12 kg · 24 kg total × 12 reps');
   });
 
   it('shows bodyweight with or without added weight', () => {
@@ -63,7 +66,7 @@ describe('formatSetFor', () => {
 
   it('has a short form for chips', () => {
     expect(shortSetFor(set(20, 'kg', 10), BARBELL)).toBe('20/side × 10');
-    expect(shortSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2×20 kg × 10');
+    expect(shortSetFor(set(20, 'kg', 10), DUMBBELLS)).toBe('2×20=40 kg × 10');
     expect(shortSetFor(set(null, null, null, 45), PLANK)).toBe('BW · 45 s');
   });
 });

@@ -104,9 +104,9 @@ export function kindFor(name: string): ExerciseKind {
   const has = (pattern: RegExp) => pattern.test(key);
   const measure: Measure = has(/\b(plank|hold|hang|wall sit|l-?sit|isometric)\b/) ? 'time' : 'reps';
   let equipment: Equipment = 'machine';
-  if (has(/\b(one arm|single arm|single|one-arm|single-arm)\b.*\bdumbbell|\bdumbbell\b.*\b(one arm|single arm)\b/)) {
+  if (has(/\b(one arm|single arm|single|one-arm|single-arm)\b.*\bdumb?bell|\bdumb?bell\b.*\b(one arm|single arm)\b/)) {
     equipment = 'dumbbell';
-  } else if (has(/\bdumbbells?\b|\bdb\b/)) equipment = 'dumbbells';
+  } else if (has(/\bdumb?bells?\b|\bdb\b/)) equipment = 'dumbbells';
   else if (has(/\b(barbell|ez|smith|bar)\b/)) equipment = 'barbell';
   else if (has(/\b(machine|cable|pulldown|pushdown|press machine)\b/)) equipment = 'machine';
   else if (measure === 'time' || has(/\b(push ?-?ups?|pull ?-?ups?|chin ?-?ups?|dips?|bodyweight|sit ?-?ups?)\b/)) {
@@ -133,7 +133,7 @@ export function formatDurationS(seconds: number): string {
   return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
 }
 
-// What the weight means for this equipment: "20 kg per side · 60 kg total", "2 × 20 kg".
+// What the weight means for this equipment: "20 kg per side · 60 kg total", "2 × 20 kg · 40 kg total".
 export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
   const { weight, unit } = set;
   if (!kind) return formatWeight(weight, unit);
@@ -148,7 +148,7 @@ export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
     case 'plates':
       return `${trim(weight)} ${unit} per side`;
     case 'dumbbells':
-      return `2 × ${trim(weight)} ${unit}`;
+      return `2 × ${trim(weight)} ${unit} · ${trim(2 * weight)} ${unit} total`;
     case 'bodyweight':
       return weight === 0 ? 'Bodyweight' : `Bodyweight + ${trim(weight)} ${unit}`;
     default:
@@ -166,16 +166,16 @@ function formatEffort(set: ParsedSet): string {
 export function formatSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
   const load = formatLoad(set, kind);
   const effort = formatEffort(set);
-  if (load && effort) return `${load}${set.durationS != null || kind?.equipment === 'dumbbells' ? ' · ' : ' × '}${effort}`;
+  if (load && effort) return `${load}${set.durationS != null ? ' · ' : ' × '}${effort}`;
   return load || effort || 'Set';
 }
 
-// A short form that fits on a chip: "20/side × 10", "2×20 kg × 10", "BW · 45 s".
+// A short form that fits on a chip: "20/side × 10", "2×20=40 kg × 10", "BW · 45 s".
 export function shortSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
   let load: string;
   if (set.weight === null || set.unit === null) load = kind?.equipment === 'barbell' ? 'Bar' : 'BW';
   else if (kind?.equipment === 'barbell' || kind?.equipment === 'plates') load = `${trim(set.weight)}/side`;
-  else if (kind?.equipment === 'dumbbells') load = `2×${trim(set.weight)} ${set.unit}`;
+  else if (kind?.equipment === 'dumbbells') load = `2×${trim(set.weight)}=${trim(2 * set.weight)} ${set.unit}`;
   else if (kind?.equipment === 'bodyweight') load = set.weight === 0 ? 'BW' : `BW+${trim(set.weight)} ${set.unit}`;
   else load = `${trim(set.weight)} ${set.unit}`;
   if (set.durationS != null) return `${load} · ${formatDurationS(set.durationS)}`;
