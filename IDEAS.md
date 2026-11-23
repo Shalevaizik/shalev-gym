@@ -40,6 +40,11 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
   - Each tester's workouts stay on their own phone; no running costs without AI.
   - Before the first beta install, set up **automatic updates** (EAS Update): later changes, including adding AI, reach the friend's app the next time it opens, with no new link or reinstall. Free on Expo's free plan at this scale. It must be in the app from the first install, since updates only reach an app that can receive them. Changes that add native pieces (e.g. camera features) still need a new install link; installing over the old app keeps the friend's workouts.
   - **Back up the Android signing key** (the keystore and its passwords, kept on Shalev's computer, never on GitHub) somewhere safe, e.g. a password manager or a private cloud folder. Android only accepts updates signed with the same key: if it's lost, testers must uninstall (losing their workouts) and install fresh.
+- 2026-11-23: Specialised AI models from Hugging Face, next to Claude. The small online service (the "one door") sends each job to the best tool, so each piece can be swapped on its own.
+  - **Better Hebrew speech recognition:** a Hebrew-trained speech-to-text model instead of the phone's built-in recognition. Only if testing the Hebrew version shows the phone mishears gym words. This improves *hearing* (sound → words); understanding the words stays with rules or Claude.
+  - **Form checking with pose detection:** the camera finds the body's joints to count reps or warn about form (e.g. "knees cave in on squats"). Small models can run on the phone itself: no internet, no per-use cost. Needs a new install (camera is a native piece).
+  - Before using any model: check its license (some are personal or non-commercial use only), test its quality on real voice and video, and compare running costs (Hugging Face paid hosting vs. a small model on the phone).
+  - Optional: finish the Hugging Face connector sign-in on claude.ai (Settings → Connectors) so Claude can search and compare models.
 
 ## Coming soon
 
