@@ -106,3 +106,9 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - b. The date and time of the workout
     - c. The app creates the title automatically when the workout ends, from the exercises logged and the muscle groups they train (per requirement No. 9). The user never has to say or type a title
     - d. Optionally, the user can tap a title to rename it (e.g. "Deload day")
+22. The workout session screen (a running workout) will fit the phone's screen and aspect ratio:
+    - a. It fits the full width of the screen on any phone size and shape (e.g. tall 20:9 and shorter 16:9 phones), with nothing cut off at the sides and no sideways scrolling
+    - b. The main controls stay visible on screen without scrolling: the timer, the current exercise, the microphone button and the text input. Long lists (logged exercises and sets, suggestions) scroll inside the screen
+    - c. Nothing is hidden behind the phone's notch, camera cut-out, status bar or bottom navigation bar
+    - d. When the keyboard opens for typing, the text input and its button stay visible above it
+    - e. Text and buttons keep a readable size and big enough tap targets on small phones, and use the extra space on large ones
