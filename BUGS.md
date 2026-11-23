@@ -10,6 +10,8 @@ How it works:
 
 ## Open
 
+All four bugs below are planned for version 1.3.0 (Shalev, 2026-11-23). The Session log button in the first bug comes with requirement 22.
+
 - 2026-11-23: While a workout is running, there's no way to reach **Previous workouts**. The start screen's Workout button skips the Workout menu and goes straight back to the running workout (requirement 18d), and "Previous workouts" is only on that menu. The workout screen has no link to it either.
   - Fix (chosen by Shalev): while a workout is running, the start screen shows a small **"Previous workouts"** link under the "Continue workout" button. The big button still goes straight back to the workout in one tap (requirement 18d); the link only appears while a workout is running. Not in the ☰ menu: previous workouts aren't important enough for that menu.
   - Also (chosen by Shalev): a **"Previous workouts"** button at the bottom of the Session log screen (requirement 22c), to compare this session with past ones. This part comes with requirement 22, since that screen doesn't exist yet.
