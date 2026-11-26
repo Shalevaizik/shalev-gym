@@ -21,7 +21,9 @@ import { getRoutine, listRoutines, saveRoutine, touchRoutine, updateRoutine } fr
 import { searchExercises } from '@/domain/exerciseCatalog';
 import {
   KIND_LABEL,
+  isSessionName,
   newSession,
+  SESSION_MOVEMENTS,
   STRUCTURES,
   structureDefaults,
   UNIT_LABEL,
@@ -195,7 +197,7 @@ export default function SessionScreen() {
   const options = useMemo(() => {
     const typed = query.trim();
     if (typed.length >= 2) return searchExercises(typed, history).map((o) => o.name).slice(0, 6);
-    return history.slice(0, 8);
+    return history.filter((name) => !isSessionName(name)).slice(0, 8);
   }, [query, history]);
 
   async function save() {
@@ -403,11 +405,27 @@ export default function SessionScreen() {
                 {query.trim().length > 0 && !options.some((o) => o.toLowerCase() === query.trim().toLowerCase()) && (
                   <Chip icon="add" label={`Add “${query.trim()}”`} onPress={() => addMovement(query)} />
                 )}
-                <View style={styles.chips}>
-                  {options.map((name) => (
-                    <Chip key={name} label={name} onPress={() => addMovement(name)} />
+                {options.length > 0 && (
+                  <>
+                    {!query.trim() && <Text style={[styles.groupTitle, { color: theme.textMuted }]}>RECENT</Text>}
+                    <View style={styles.chips}>
+                      {options.map((name) => (
+                        <Chip key={name} label={name} onPress={() => addMovement(name)} />
+                      ))}
+                    </View>
+                  </>
+                )}
+                {!query.trim() &&
+                  SESSION_MOVEMENTS.map(({ group, names }) => (
+                    <View key={group} style={styles.group}>
+                      <Text style={[styles.groupTitle, { color: theme.textMuted }]}>{group.toUpperCase()}</Text>
+                      <View style={styles.chips}>
+                        {names.map((name) => (
+                          <Chip key={name} label={name} onPress={() => addMovement(name)} />
+                        ))}
+                      </View>
+                    </View>
                   ))}
-                </View>
               </View>
             ) : (
               <Button icon="add" label="Add movement" onPress={() => setAdding(true)} variant="secondary" />
@@ -514,5 +532,7 @@ const styles = StyleSheet.create({
   index: { width: 18, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   remove: { padding: 2 },
   adder: { gap: 10 },
+  group: { gap: 6 },
+  groupTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.9 },
   error: { fontSize: 15 },
 });

@@ -37,6 +37,54 @@ export const STRUCTURES: { value: Structure; label: string; detail: string }[] =
   { value: 'for-time', label: 'For Time', detail: 'Rounds as fast as you can' },
 ];
 
+// The movements offered on the session screen before anything is typed, by type. Every name is in
+// the exercise catalog, so each one counts toward its muscle group (requirement 24g).
+export const SESSION_MOVEMENTS: { group: string; names: string[] }[] = [
+  {
+    group: 'Bodyweight',
+    names: [
+      'Burpees', 'Air Squat', 'Jump Squat', 'Push-Up', 'Sit-Up', 'Mountain Climber', 'Jumping Jack', 'High Knees',
+      'Box Jump', 'Box Jump-Over', 'Burpee Box Jump-Over', 'Jumping Lunge', 'Lunges', 'Broad Jump', 'Tuck Jump',
+      'Skater Jump', 'Pistol Squat', 'Bear Crawl', 'Plank', 'V-Up', 'Hollow Hold', 'Flutter Kicks',
+      'Handstand Push-Up', 'Handstand Walk',
+    ],
+  },
+  {
+    group: 'Gymnastics',
+    names: [
+      'Pull-Up', 'Kipping Pull-Up', 'Chest-to-Bar Pull-Up', 'Burpee Pull-Up', 'Muscle-Up', 'Toes-to-Bar',
+      'Knees-to-Elbows', 'Hanging Leg Raise', 'Ring Dip', 'Dips', 'Ring Row', 'Rope Climb', 'GHD Sit-Up', 'L-Sit',
+    ],
+  },
+  {
+    group: 'Kettlebell and dumbbell',
+    names: [
+      'Kettlebell Swing', 'Goblet Squat', 'Kettlebell Snatch', 'Kettlebell Clean', 'Kettlebell Goblet Lunge',
+      'Turkish Get-Up', 'Dumbbell Snatch', 'Dumbbell Clean', 'Dumbbell Thruster', 'Devil Press', 'Man Maker',
+      'Renegade Row', 'Dumbbell Overhead Lunge', "Farmer's Walk",
+    ],
+  },
+  {
+    group: 'Barbell',
+    names: [
+      'Thruster', 'Deadlift', 'Power Clean', 'Hang Power Clean', 'Squat Clean', 'Clean and Jerk', 'Snatch',
+      'Power Snatch', 'Front Squat', 'Overhead Squat', 'Squat', 'Push Press', 'Push Jerk', 'Overhead Press',
+      'Shoulder to Overhead', 'Ground to Overhead', 'Sumo Deadlift High Pull',
+    ],
+  },
+  {
+    group: 'Ball, sled and more',
+    names: ['Wall Ball', 'Slam Ball', 'Battle Ropes', 'Sled Push', 'Sled Pull', 'Sandbag Carry', 'Sandbag Clean', 'Tire Flip'],
+  },
+  {
+    group: 'Cardio',
+    names: [
+      'Rowing Machine', 'Stationary Bike', 'Ski Erg', 'Running', 'Sprint', 'Shuttle Run', 'Double-Unders', 'Jump Rope',
+      'Treadmill', 'Stair Climber',
+    ],
+  },
+];
+
 export const UNIT_LABEL: Record<AmountUnit, string> = { reps: 'reps', calories: 'cal', meters: 'm', seconds: 's' };
 
 // What a new session starts with, so Tabata is ready to save as it is.

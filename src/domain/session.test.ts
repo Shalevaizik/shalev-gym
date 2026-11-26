@@ -5,6 +5,7 @@ import {
   readSession,
   routineSaid,
   sessionMuscleSets,
+  SESSION_MOVEMENTS,
   sessionTrigger,
   writeSession,
   type SessionDetails,
@@ -64,5 +65,28 @@ describe('HIIT and CrossFit sessions (requirement 24)', () => {
     expect(routineSaid('Friday WOD', routines)?.id).toBe('r1');
     expect(routineSaid('do the friday wod', routines)?.id).toBe('r1');
     expect(routineSaid('friday', routines)).toBeNull();
+  });
+});
+
+describe('the movements offered for HIIT and CrossFit', () => {
+  it('are all known exercises with a muscle group and equipment', () => {
+    const { CATALOG } = jest.requireActual('./exerciseCatalog') as typeof import('./exerciseCatalog');
+    const { kindFor } = jest.requireActual('./equipment') as typeof import('./equipment');
+    const known = new Set(CATALOG.map((e) => e.name));
+    const names = SESSION_MOVEMENTS.flatMap((g) => g.names);
+    expect(names.filter((name) => !known.has(name))).toEqual([]);
+    expect(new Set(names).size).toBe(names.length);
+    expect(kindFor('Thruster').equipment).toBe('barbell');
+    expect(kindFor('Box Jump').equipment).toBe('bodyweight');
+    expect(kindFor('Ski Erg')).toMatchObject({ equipment: 'cardio', measure: 'time' });
+  });
+
+  it('are found when searched by their usual names', () => {
+    const { matchExercise } = jest.requireActual('./exerciseCatalog') as typeof import('./exerciseCatalog');
+    expect(matchExercise('wall balls').best?.name).toBe('Wall Ball');
+    expect(matchExercise('t2b').best?.name).toBe('Toes-to-Bar');
+    expect(matchExercise('db snatch').best?.name).toBe('Dumbbell Snatch');
+    expect(matchExercise('ball slams').best?.name).toBe('Slam Ball');
+    expect(matchExercise('thrusters').best?.name).toBe('Thruster');
   });
 });
