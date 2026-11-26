@@ -18,12 +18,11 @@ import {
 import { useAuth } from '@/auth/AuthProvider';
 import { getExercise, recentExerciseNames, saveSession, updateSession } from '@/data/exerciseRepo';
 import { getRoutine, listRoutines, saveRoutine, touchRoutine, updateRoutine } from '@/data/routineRepo';
-import { searchExercises } from '@/domain/exerciseCatalog';
 import {
   KIND_LABEL,
+  defaultUnit,
   isSessionName,
   newSession,
-  SESSION_MOVEMENTS,
   STRUCTURES,
   structureDefaults,
   UNIT_LABEL,
@@ -36,6 +35,7 @@ import {
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { haptic } from '@/ui/haptics';
+import { MovementPicker } from '@/ui/MovementPicker';
 import { useTheme, type Theme } from '@/ui/theme';
 
 type DraftMovement = { key: string; name: string; amount: string; unit: AmountUnit; weight: string };
@@ -81,7 +81,6 @@ export default function SessionScreen() {
   const [routineName, setRoutineName] = useState('');
   const [updateSaved, setUpdateSaved] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [query, setQuery] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,20 +184,18 @@ export default function SessionScreen() {
     const trimmed = name.trim();
     if (!trimmed) return;
     haptic.select();
-    setMovements((current) => [...current, { key: randomUUID(), name: trimmed, amount: '', unit: 'reps', weight: '' }]);
-    setQuery('');
-    setAdding(false);
+    setMovements((current) => [
+      ...current,
+      { key: randomUUID(), name: trimmed, amount: '', unit: defaultUnit(trimmed), weight: '' },
+    ]);
   }
 
   function change(key: string, update: Partial<DraftMovement>) {
     setMovements((current) => current.map((m) => (m.key === key ? { ...m, ...update } : m)));
   }
 
-  const options = useMemo(() => {
-    const typed = query.trim();
-    if (typed.length >= 2) return searchExercises(typed, history).map((o) => o.name).slice(0, 6);
-    return history.filter((name) => !isSessionName(name)).slice(0, 8);
-  }, [query, history]);
+  // Recently used movements, for the picker's Recent group.
+  const recent = useMemo(() => history.filter((name) => !isSessionName(name)), [history]);
 
   async function save() {
     if (!userId) return;
@@ -385,48 +382,12 @@ export default function SessionScreen() {
             ))}
 
             {adding ? (
-              <View style={styles.adder}>
-                <View style={styles.inputRow}>
-                  <TextInput
-                    accessibilityLabel="Movement name"
-                    autoFocus
-                    onChangeText={setQuery}
-                    onSubmitEditing={() => addMovement(query)}
-                    placeholder="Search or type a movement"
-                    placeholderTextColor={theme.textMuted}
-                    returnKeyType="done"
-                    style={[inputStyle, styles.flex]}
-                    value={query}
-                  />
-                  <Pressable accessibilityLabel="Close" accessibilityRole="button" hitSlop={8} onPress={() => setAdding(false)}>
-                    <Ionicons color={theme.textMuted} name="close" size={26} />
-                  </Pressable>
-                </View>
-                {query.trim().length > 0 && !options.some((o) => o.toLowerCase() === query.trim().toLowerCase()) && (
-                  <Chip icon="add" label={`Add “${query.trim()}”`} onPress={() => addMovement(query)} />
-                )}
-                {options.length > 0 && (
-                  <>
-                    {!query.trim() && <Text style={[styles.groupTitle, { color: theme.textMuted }]}>RECENT</Text>}
-                    <View style={styles.chips}>
-                      {options.map((name) => (
-                        <Chip key={name} label={name} onPress={() => addMovement(name)} />
-                      ))}
-                    </View>
-                  </>
-                )}
-                {!query.trim() &&
-                  SESSION_MOVEMENTS.map(({ group, names }) => (
-                    <View key={group} style={styles.group}>
-                      <Text style={[styles.groupTitle, { color: theme.textMuted }]}>{group.toUpperCase()}</Text>
-                      <View style={styles.chips}>
-                        {names.map((name) => (
-                          <Chip key={name} label={name} onPress={() => addMovement(name)} />
-                        ))}
-                      </View>
-                    </View>
-                  ))}
-              </View>
+              <MovementPicker
+                added={movements.map((m) => m.name)}
+                onAdd={addMovement}
+                onDone={() => setAdding(false)}
+                recent={recent}
+              />
             ) : (
               <Button icon="add" label="Add movement" onPress={() => setAdding(true)} variant="secondary" />
             )}
@@ -531,8 +492,5 @@ const styles = StyleSheet.create({
   movementHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   index: { width: 18, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   remove: { padding: 2 },
-  adder: { gap: 10 },
-  group: { gap: 6 },
-  groupTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.9 },
   error: { fontSize: 15 },
 });

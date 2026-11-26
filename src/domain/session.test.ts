@@ -90,3 +90,22 @@ describe('the movements offered for HIIT and CrossFit', () => {
     expect(matchExercise('thrusters').best?.name).toBe('Thruster');
   });
 });
+
+describe('the amount a movement starts with', () => {
+  it('fits the movement', () => {
+    const { defaultUnit } = jest.requireActual('./session') as typeof import('./session');
+    expect(defaultUnit('Rowing Machine')).toBe('calories');
+    expect(defaultUnit('Stationary Bike')).toBe('calories');
+    expect(defaultUnit('Ski Erg')).toBe('calories');
+    expect(defaultUnit('Running')).toBe('meters');
+    expect(defaultUnit("Farmer's Walk")).toBe('meters');
+    expect(defaultUnit('Sled Push')).toBe('meters');
+    expect(defaultUnit('Plank')).toBe('seconds');
+    expect(defaultUnit('Battle Ropes')).toBe('seconds');
+    expect(defaultUnit('Double-Unders')).toBe('reps');
+    // Rows that aren't the rowing machine are counted in reps.
+    expect(defaultUnit('Ring Row')).toBe('reps');
+    expect(defaultUnit('Renegade Row')).toBe('reps');
+    expect(defaultUnit('Thruster')).toBe('reps');
+  });
+});

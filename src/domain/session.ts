@@ -2,6 +2,7 @@
 // Tabata, EMOM, AMRAP or For Time, with their settings), its movements with their amounts, and how
 // long it took. A session can be saved as a named routine and used again.
 
+import { kindFor } from './equipment';
 import { muscleOf } from './exerciseCatalog';
 import { muscleShares, type BodyMuscle } from './muscles';
 
@@ -84,6 +85,22 @@ export const SESSION_MOVEMENTS: { group: string; names: string[] }[] = [
     ],
   },
 ];
+
+// The amount that fits a movement when it's added: calories on a rower, bike or ski erg, meters
+// for running, seconds for holds, and reps for everything else. It can be changed.
+export function defaultUnit(name: string): AmountUnit {
+  const key = name.trim().toLowerCase();
+  const kind = kindFor(name);
+  if (kind.equipment === 'cardio') {
+    if (/\b(rowing|rower|bike|cycling|ski|erg)\b/.test(key)) return 'calories';
+    if (/\b(double-unders|jump rope|skipping)\b/.test(key)) return 'reps';
+    if (/\b(run|running|sprint|shuttle|treadmill|swim|swimming)\b/.test(key)) return 'meters';
+    return 'seconds';
+  }
+  // Carries and sleds go a distance: farmer's walk, sandbag carry, sled push.
+  if (/\b(carry|walk|sled)\b/.test(key)) return 'meters';
+  return kind.measure === 'time' ? 'seconds' : 'reps';
+}
 
 export const UNIT_LABEL: Record<AmountUnit, string> = { reps: 'reps', calories: 'cal', meters: 'm', seconds: 's' };
 
