@@ -10,7 +10,9 @@ How it works:
 
 ## Open
 
-(none)
+- 2026-11-26: One-arm dumbbell exercises count only one arm. A Dumbbell Row of 16 kg × 12 reps (12 with each arm) is logged and counted as one arm's work, so the volume for these exercises is half of what was done. Planned for 1.3.0.
+  - Fix (chosen by Shalev): for one-arm exercises, the app assumes both arms did the reps. It shows "16 kg × 12 reps each arm" and counts double the volume.
+  - Only for exercises done one arm at a time (e.g. Dumbbell Row, Concentration Curl, anything named "one-arm" or "single-arm"). Exercises that hold one dumbbell with both hands (Goblet Squat, Overhead Tricep Extension, Kettlebell Swing, Russian Twist) stay as they are.
 
 ## Fixed, waiting for the next build
 
