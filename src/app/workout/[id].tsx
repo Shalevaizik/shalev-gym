@@ -129,6 +129,8 @@ export default function WorkoutScreen() {
   const [doubt, setDoubt] = useState<Doubt | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  // The exercise box's height on this phone, so the record button can take what's left.
+  const [stageHeight, setStageHeight] = useState(0);
   const userId = user?.id;
   const inProgress = workout?.endedAt === null;
 
@@ -657,10 +659,11 @@ export default function WorkoutScreen() {
   // smaller record button and tighter spacing; tall phones get a bigger one. While the keyboard is
   // open, the record button steps aside so the typing box stays above the keyboard.
 
-  const compact = height < 700;
-  const tall = height >= 820;
+  const compact = height < 700 || (stageHeight > 0 && stageHeight < 340);
   const gap = compact ? 10 : 14;
-  const micSize = compact ? 80 : tall ? 116 : 96;
+  // About 270 points of the box go to the exercise name, hints and spacing; the record button gets
+  // the rest, between 64 (smallest phones) and 116 (tall phones).
+  const micSize = stageHeight > 0 ? Math.round(Math.max(64, Math.min(116, (stageHeight - 270) / 1.25))) : 96;
   const shownNotice: Notice | null = notice ?? (speech.error ? { tone: 'error', text: speech.error } : null);
   const lastSetEnd = exercises
     .flatMap((e) => e.sets.map((s) => s.endedAt))
@@ -711,7 +714,7 @@ export default function WorkoutScreen() {
   );
 
   const hint = (text: string) =>
-    !compact || !keyboardOpen ? (
+    !keyboardOpen && (stageHeight === 0 || stageHeight >= 300) ? (
       <Text numberOfLines={compact ? 2 : 3} style={[styles.hint, { color: theme.textMuted }]}>
         {text}
       </Text>
@@ -943,25 +946,28 @@ export default function WorkoutScreen() {
             </View>
           </View>
         )}
-        {!doubt && (previous || lastLogged(active)) && (
-          <View style={[styles.chips, styles.centerChips]}>
-            {previous && (
-              <Chip
-                accessibilityLabel={t('Log the same set again: {set}', { set: formatSetFor(previous, kindOf(target)) })}
-                disabled={saving || speech.listening}
-                icon="repeat"
-                label={t('Same again · {set}', { set: shortSetFor(previous, kindOf(target)) })}
-                onPress={() => addSets(target, [previous], null, new Date())}
-              />
-            )}
-            {lastLogged(active) && (
-              <Chip disabled={saving || speech.listening} icon="arrow-undo" label={t('Undo last set')} onPress={undo} />
-            )}
-          </View>
-        )}
       </>
     );
   }
+
+  // "Same again" and "Undo" are used after almost every set, so they sit outside the exercise box
+  // and are always visible, whatever the phone's size.
+  const quickActions = mode === 'sets' && target && !doubt && !keyboardOpen && (previous || lastLogged(active)) && (
+    <View style={[styles.chips, styles.centerChips]}>
+      {previous && (
+        <Chip
+          accessibilityLabel={t('Log the same set again: {set}', { set: formatSetFor(previous, kindOf(target)) })}
+          disabled={saving || speech.listening}
+          icon="repeat"
+          label={t('Same again · {set}', { set: shortSetFor(previous, kindOf(target)) })}
+          onPress={() => addSets(target, [previous], null, new Date())}
+        />
+      )}
+      {lastLogged(active) && (
+        <Chip disabled={saving || speech.listening} icon="arrow-undo" label={t('Undo last set')} onPress={undo} />
+      )}
+    </View>
+  );
 
   const typePlaceholder =
     mode === 'sets' && target
@@ -1007,8 +1013,11 @@ export default function WorkoutScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.card, styles.stage, { backgroundColor: theme.surface, borderColor: mode === 'sets' ? theme.accent : theme.border }]}>
-          {/* Only scrolls if a very small phone can't fit an unusually long list. */}
+        <View
+          onLayout={(event) => setStageHeight(event.nativeEvent.layout.height)}
+          style={[styles.card, styles.stage, { backgroundColor: theme.surface, borderColor: mode === 'sets' ? theme.accent : theme.border }]}>
+          {/* The record button and hints shrink to the space left, so this only scrolls on a very small
+              screen with an unusually long list. */}
           <ScrollView
             bounces={false}
             contentContainerStyle={[styles.stageContent, { gap }]}
@@ -1029,6 +1038,7 @@ export default function WorkoutScreen() {
             })}
           </Text>
         )}
+        {quickActions}
 
         {mode !== 'confirm' && (
           <View style={styles.typeRow}>

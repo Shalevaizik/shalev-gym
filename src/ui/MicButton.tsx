@@ -52,7 +52,8 @@ export function MicButton({ listening, level, onPress, label, busy, disabled, si
 
   return (
     <View style={styles.wrap}>
-      <View style={{ width: size * 1.5, height: size * 1.5, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Room for the listening ring; it may spread a little past this while it pulses. */}
+      <View style={{ width: size * 1.2, height: size * 1.2, alignItems: 'center', justifyContent: 'center' }}>
         {listening && (
           <>
             <Animated.View
