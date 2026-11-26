@@ -7,6 +7,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useAuth } from '@/auth/AuthProvider';
 import { listBodyWeights, loadTraining } from '@/data/analysisRepo';
 import { exerciseProgress, type ExerciseProgress } from '@/domain/progress';
+import { count, dateLocale, exerciseName, t } from '@/i18n/core';
 import { ProgressChart } from '@/ui/ProgressChart';
 import { useTheme } from '@/ui/theme';
 
@@ -51,49 +52,51 @@ export default function ExerciseProgressScreen() {
   const latest = points.at(-1);
   const chosen = selected !== null ? points[selected] : null;
   const records = points.filter((p) => p.record).length;
-  const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const day = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
-      <Stack.Screen options={{ title: progress.name }} />
+      <Stack.Screen options={{ title: exerciseName(progress.name) }} />
       <View style={styles.column}>
         {points.length === 0 ? (
-          <Text style={[styles.body, { color: theme.textMuted }]}>No sets logged for this exercise yet.</Text>
+          <Text style={[styles.body, { color: theme.textMuted }]}>{t('No sets logged for this exercise yet.')}</Text>
         ) : (
           <>
             <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Text accessibilityRole="header" style={[styles.cardTitle, { color: theme.text }]}>
-                {text.title}
+                {t(text.title)}
               </Text>
               {latest && first && points.length > 1 && (
                 <Text style={[styles.headline, { color: theme.text }]}>
                   {latest.value - first.value >= 0 ? '+' : ''}
-                  {Math.round((latest.value - first.value) * 10) / 10} {text.unit}
-                  <Text style={[styles.body, styles.normal, { color: theme.textMuted }]}> since {day(first.date)}</Text>
+                  {Math.round((latest.value - first.value) * 10) / 10} {t(text.unit)}
+                  <Text style={[styles.body, styles.normal, { color: theme.textMuted }]}>
+                    {' '}
+                    {t('since {date}', { date: day(first.date) })}
+                  </Text>
                 </Text>
               )}
               <Text style={[styles.small, { color: theme.textMuted }]}>
                 {chosen
-                  ? `${day(chosen.date)}: ${chosen.label}${chosen.record ? ' · record' : ''}`
-                  : 'Tap a point to see that workout’s best set.'}
+                  ? `${day(chosen.date)}: ${chosen.label}${chosen.record ? ` · ${t('record')}` : ''}`
+                  : t('Tap a point to see that workout’s best set.')}
               </Text>
               <ProgressChart onSelect={setSelected} points={points} selected={selected} unit={text.unit} />
-              <Text style={[styles.small, { color: theme.textMuted }]}>{text.note}</Text>
+              <Text style={[styles.small, { color: theme.textMuted }]}>{t(text.note)}</Text>
             </View>
 
             <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Text accessibilityRole="header" style={[styles.cardTitle, { color: theme.text }]}>
-                Every workout
+                {t('Every workout')}
               </Text>
               <Text style={[styles.small, { color: theme.textMuted }]}>
-                {points.length} {points.length === 1 ? 'workout' : 'workouts'} · {records}{' '}
-                {records === 1 ? 'record' : 'records'}
+                {count(points.length, 'workout')} · {count(records, 'record')}
               </Text>
               {[...points].reverse().map((p) => (
                 <View key={p.workoutId} style={[styles.row, { borderTopColor: theme.border }]}>
                   <Text style={[styles.date, { color: theme.textMuted }]}>{day(p.date)}</Text>
                   <Text style={[styles.value, { color: theme.text }]}>{p.label}</Text>
-                  {p.record && <Ionicons accessibilityLabel="Record" color={theme.analyse} name="trophy" size={16} />}
+                  {p.record && <Ionicons accessibilityLabel={t('Record')} color={theme.analyse} name="trophy" size={16} />}
                 </View>
               ))}
             </View>

@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthProvider';
 import { autoTitles, listWorkouts } from '@/data/workoutRepo';
 import { formatDayLabel, formatTime, groupByDay, type Workout } from '@/domain/workout';
+import { t, titleText } from '@/i18n/core';
 import { useTheme } from '@/ui/theme';
 
 // Analyse → Workout summary: pick a workout (requirement 3c).
@@ -28,7 +29,7 @@ export default function SummaryList() {
           setWorkouts(loaded.filter((w) => w.endedAt !== null));
           setTitles(named);
         })
-        .catch(() => !cancelled && setError('Your workouts could not be loaded.'));
+        .catch(() => !cancelled && setError(t('Your workouts could not be loaded.')));
       return () => {
         cancelled = true;
       };
@@ -43,7 +44,7 @@ export default function SummaryList() {
       <View style={styles.column}>
         {error && <Text style={[styles.message, { color: theme.danger }]}>{error}</Text>}
         {workouts !== null && workouts.length === 0 && (
-          <Text style={[styles.message, { color: theme.textMuted }]}>Finish a workout to see its summary here.</Text>
+          <Text style={[styles.message, { color: theme.textMuted }]}>{t('Finish a workout to see its summary here.')}</Text>
         )}
         {days.map((day) => (
           <View key={day.key} style={styles.day}>
@@ -51,7 +52,7 @@ export default function SummaryList() {
               {formatDayLabel(day.date, now)}
             </Text>
             {day.workouts.map((workout) => {
-              const title = workout.title ?? titles.get(workout.id) ?? 'Workout';
+              const title = workout.title ?? titleText(titles.get(workout.id) ?? 'Workout');
               return (
                 <Pressable
                   key={workout.id}

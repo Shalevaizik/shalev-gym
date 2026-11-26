@@ -3,7 +3,7 @@
 
 import { CATALOG, muscleOf, type Muscle } from './exerciseCatalog';
 import type { TrainingWorkout } from './training';
-import { workoutTitle } from './workoutTitle';
+import { withoutCardio, workoutTitle } from './workoutTitle';
 
 // Muscle groups usually trained together, so a chest day can suggest triceps.
 const RELATED: Partial<Record<Muscle, Muscle[]>> = {
@@ -24,7 +24,11 @@ export type Suggestions = { focus: string; options: Suggestion[] };
 
 type Current = { name: string; muscle: string | null };
 
-const mainMuscle = (e: Current): Muscle | null => (e.muscle as Muscle | null) ?? muscleOf(e.name);
+// Cardio doesn't point to a muscle group, so it neither leads nor gets suggested.
+const mainMuscle = (e: Current): Muscle | null => {
+  const muscle = (e.muscle as Muscle | null) ?? muscleOf(e.name);
+  return muscle === 'Cardio' ? null : muscle;
+};
 
 export function suggestNext(current: Current[], past: TrainingWorkout[], limit = 3): Suggestions | null {
   const focus = new Set(current.map(mainMuscle).filter((m): m is Muscle => m !== null));
@@ -54,11 +58,13 @@ export function suggestNext(current: Current[], past: TrainingWorkout[], limit =
     }
   }
   // Common exercises fill in when there is little history.
-  CATALOG.forEach((entry, index) => add(entry.name, entry.muscle, weightOf(entry.muscle) * 0.05 - index * 0.0001));
+  CATALOG.forEach((entry, index) => {
+    if (entry.muscle !== 'Cardio') add(entry.name, entry.muscle, weightOf(entry.muscle) * 0.05 - index * 0.0001);
+  });
 
   const options = [...scores.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((s) => s.option);
-  return { focus: workoutTitle(current.map((e) => ({ ...e, sets: 1 }))), options };
+  return { focus: withoutCardio(workoutTitle(current.map((e) => ({ ...e, sets: 1 })))), options };
 }

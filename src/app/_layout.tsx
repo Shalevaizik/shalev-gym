@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { LocaleProvider, Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
@@ -7,9 +7,14 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { DATABASE_NAME, migrate } from '@/data/db';
+import { t } from '@/i18n/core';
+import { startLanguage } from '@/i18n/language';
 import { AppMenu } from '@/ui/AppMenu';
 import { Button } from '@/ui/Button';
 import { useTheme } from '@/ui/theme';
+
+// The language is chosen before anything draws, so every screen starts in it (Hebrew or English).
+const language = startLanguage();
 
 const menu = () => <AppMenu />;
 
@@ -36,6 +41,7 @@ function Routes() {
   }
 
   return (
+    <LocaleProvider direction={language === 'he' ? 'rtl' : 'ltr'}>
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: theme.background },
@@ -44,24 +50,26 @@ function Routes() {
         contentStyle: { backgroundColor: theme.background, paddingBottom: navBarSpace },
       }}>
       <Stack.Protected guard={user !== null}>
-        <Stack.Screen name="index" options={{ title: 'Shalev Gym', headerRight: menu }} />
-        <Stack.Screen name="workout/index" options={{ title: 'Workout', headerRight: menu }} />
-        <Stack.Screen name="workout/history" options={{ title: 'Previous workouts', headerRight: menu }} />
-        <Stack.Screen name="workout/[id]" options={{ title: 'Workout', headerRight: menu }} />
-        <Stack.Screen name="exercise/[id]" options={{ title: 'Edit exercise' }} />
-        <Stack.Screen name="analyse/index" options={{ title: 'Analyse', headerRight: menu }} />
-        <Stack.Screen name="analyse/monthly" options={{ title: 'Monthly summary', headerRight: menu }} />
-        <Stack.Screen name="analyse/summary/index" options={{ title: 'Workout summary', headerRight: menu }} />
-        <Stack.Screen name="analyse/summary/[id]" options={{ title: 'Workout summary', headerRight: menu }} />
-        <Stack.Screen name="analyse/progress/index" options={{ title: 'Progress', headerRight: menu }} />
-        <Stack.Screen name="analyse/progress/[name]" options={{ title: 'Progress', headerRight: menu }} />
-        <Stack.Screen name="profile" options={{ title: 'Your profile' }} />
-        <Stack.Screen name="bar-weights" options={{ title: 'Bar weights' }} />
+        <Stack.Screen name="index" options={{ title: t('Shalev Gym'), headerRight: menu }} />
+        <Stack.Screen name="workout/index" options={{ title: t('Workout'), headerRight: menu }} />
+        <Stack.Screen name="workout/history" options={{ title: t('Previous workouts'), headerRight: menu }} />
+        <Stack.Screen name="workout/[id]" options={{ title: t('Workout'), headerRight: menu }} />
+        <Stack.Screen name="workout/session-log" options={{ title: t('Session log') }} />
+        <Stack.Screen name="exercise/[id]" options={{ title: t('Edit exercise') }} />
+        <Stack.Screen name="analyse/index" options={{ title: t('Analyse'), headerRight: menu }} />
+        <Stack.Screen name="analyse/monthly" options={{ title: t('Monthly summary'), headerRight: menu }} />
+        <Stack.Screen name="analyse/summary/index" options={{ title: t('Workout summary'), headerRight: menu }} />
+        <Stack.Screen name="analyse/summary/[id]" options={{ title: t('Workout summary'), headerRight: menu }} />
+        <Stack.Screen name="analyse/progress/index" options={{ title: t('Progress'), headerRight: menu }} />
+        <Stack.Screen name="analyse/progress/[name]" options={{ title: t('Progress'), headerRight: menu }} />
+        <Stack.Screen name="profile" options={{ title: t('Your profile') }} />
+        <Stack.Screen name="bar-weights" options={{ title: t('Bar weights') }} />
       </Stack.Protected>
       <Stack.Protected guard={user === null}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       </Stack.Protected>
     </Stack>
+    </LocaleProvider>
   );
 }
 
@@ -73,14 +81,14 @@ function DatabaseUnavailable({ error, onRetry }: { error: Error; onRetry: () => 
   return (
     <View style={[styles.unavailable, { backgroundColor: theme.background }]}>
       <Text accessibilityRole="header" style={[styles.unavailableTitle, { color: theme.text }]}>
-        {otherTab ? 'Shalev Gym is open in another tab' : 'Your workouts could not be opened'}
+        {otherTab ? t('Shalev Gym is open in another tab') : t('Your workouts could not be opened')}
       </Text>
       <Text style={[styles.unavailableText, { color: theme.textMuted }]}>
         {otherTab
-          ? 'The app can only be open in one browser tab at a time. Close the other tab, then tap Try again.'
-          : 'Something went wrong while opening your data. Tap Try again.'}
+          ? t('The app can only be open in one browser tab at a time. Close the other tab, then tap Try again.')
+          : t('Something went wrong while opening your data. Tap Try again.')}
       </Text>
-      <Button icon="refresh" label="Try again" onPress={onRetry} />
+      <Button icon="refresh" label={t('Try again')} onPress={onRetry} />
     </View>
   );
 }

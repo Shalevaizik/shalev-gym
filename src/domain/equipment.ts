@@ -2,9 +2,12 @@
 // is understood the way the trainer means it: per side on a barbell, per hand with dumbbells,
 // added weight on bodyweight exercises, and seconds on a plank.
 
+import { t } from '../i18n/core';
+
 import { formatWeight, toKg, toLb, type ParsedSet, type WeightUnit } from './exerciseLog';
 
-export type Equipment = 'barbell' | 'dumbbells' | 'dumbbell' | 'machine' | 'plates' | 'bodyweight';
+// cardio: cardio and conditioning sessions (treadmill, HIIT, CrossFit), logged as a time.
+export type Equipment = 'barbell' | 'dumbbells' | 'dumbbell' | 'machine' | 'plates' | 'bodyweight' | 'cardio';
 export type Measure = 'reps' | 'time';
 
 export const EQUIPMENT_LABEL: Record<Equipment, string> = {
@@ -14,6 +17,7 @@ export const EQUIPMENT_LABEL: Record<Equipment, string> = {
   machine: 'Machine or cable',
   plates: 'Plate-loaded machine',
   bodyweight: 'Bodyweight',
+  cardio: 'Cardio',
 };
 
 // What the trainer says for each equipment type, shown when the exercise starts.
@@ -24,6 +28,7 @@ export const EQUIPMENT_HINT: Record<Equipment, string> = {
   machine: 'Say the weight on the machine, like “50 kg 12 reps”.',
   plates: 'Say the weight per side, like “40 a side 10 reps”.',
   bodyweight: 'Say the reps, or the added weight too, like “plus 10 kg 8 reps”.',
+  cardio: 'When you finish, say how long, like “15 minutes” or just “20”.',
 };
 
 export const DEFAULT_BAR_KG = 20;
@@ -126,6 +131,15 @@ const KNOWN: Record<string, [Equipment, Measure?, number?]> = {
   'dead hang': ['bodyweight', 'time'],
 };
 
+// Cardio and conditioning, from the words in a name: "Treadmill", "HIIT", "CrossFit WOD".
+const CARDIO =
+  /\b(cardio|treadmill|run|running|jog|jogging|walk|walking|bike|biking|cycling|cycle|spin|spinning|rowing|rower|erg|elliptical|cross ?trainer|stair ?(master|climber|mill)|stairs|hiit|intervals?|crossfit|wod|metcon|conditioning|jump ?rope|skipping|swim|swimming|zumba|boxing)\b/;
+
+export function isCardio(name: string): boolean {
+  const key = name.trim().toLowerCase();
+  return !(key in KNOWN) && CARDIO.test(key);
+}
+
 // The equipment and measure of an exercise: from the catalog, else guessed from words in its name.
 export function kindFor(name: string): ExerciseKind {
   const key = name.trim().toLowerCase();
@@ -134,6 +148,7 @@ export function kindFor(name: string): ExerciseKind {
     const [equipment, measure = 'reps', barKg] = known;
     return withArms({ equipment, measure, barKg: equipment === 'barbell' ? (barKg ?? DEFAULT_BAR_KG) : null }, name);
   }
+  if (isCardio(key)) return { equipment: 'cardio', measure: 'time', barKg: null };
   const has = (pattern: RegExp) => pattern.test(key);
   const measure: Measure = has(/\b(plank|hold|hang|wall sit|l-?sit|isometric)\b/) ? 'time' : 'reps';
   let equipment: Equipment = 'machine';
@@ -162,58 +177,65 @@ function barIn(unit: WeightUnit, barKg: number): number {
 export function formatDurationS(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const rest = Math.round(seconds % 60);
-  if (minutes === 0) return `${rest} s`;
-  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+  if (minutes === 0) return t('{s} s', { s: rest });
+  return rest === 0 ? t('{m} min', { m: minutes }) : t('{m} min {s} s', { m: minutes, s: rest });
 }
+
+// The equipment's name and what to say for it, in the app's language.
+export const equipmentLabel = (equipment: Equipment) => t(EQUIPMENT_LABEL[equipment]);
+export const equipmentHint = (equipment: Equipment) => t(EQUIPMENT_HINT[equipment]);
 
 // What the weight means for this equipment: "20 kg per side · 60 kg total", "2 × 20 kg · 40 kg total".
 export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
   const { weight, unit } = set;
   if (!kind) return formatWeight(weight, unit);
+  if (kind.equipment === 'cardio') return '';
   const bar = kind.barKg ?? DEFAULT_BAR_KG;
   if (weight === null || unit === null) {
-    if (kind.equipment === 'barbell') return `Empty bar (${trim(bar)} kg)`;
-    return kind.equipment === 'bodyweight' ? 'Bodyweight' : '';
+    if (kind.equipment === 'barbell') return t('Empty bar ({kg} kg)', { kg: trim(bar) });
+    return kind.equipment === 'bodyweight' ? t('Bodyweight') : '';
   }
+  const w = trim(weight);
   switch (kind.equipment) {
     case 'barbell':
-      return `${trim(weight)} ${unit} per side · ${trim(2 * weight + barIn(unit, bar))} ${unit} total`;
+      return t('{w} {u} per side · {total} {u} total', { w, u: unit, total: trim(2 * weight + barIn(unit, bar)) });
     case 'plates':
       // The machine's own sled weight isn't known, so the total is the plates only.
-      return `${trim(weight)} ${unit} per side · ${trim(2 * weight)} ${unit} plates`;
+      return t('{w} {u} per side · {total} {u} plates', { w, u: unit, total: trim(2 * weight) });
     case 'dumbbells':
-      return `2 × ${trim(weight)} ${unit} · ${trim(2 * weight)} ${unit} total`;
+      return t('2 × {w} {u} · {total} {u} total', { w, u: unit, total: trim(2 * weight) });
     case 'bodyweight':
-      return weight === 0 ? 'Bodyweight' : `Bodyweight + ${trim(weight)} ${unit}`;
+      return weight === 0 ? t('Bodyweight') : t('Bodyweight + {w} {u}', { w, u: unit });
     default:
       return formatWeight(weight, unit);
   }
 }
 
 function formatEffort(set: ParsedSet, kind: ExerciseKind | null): string {
-  const failure = set.toFailure ? 'to failure' : '';
-  const arms = kind?.oneArm ? 'each arm' : '';
+  const failure = set.toFailure ? t('to failure') : '';
+  const arms = kind?.oneArm ? t('each arm') : '';
   if (set.durationS != null) return [formatDurationS(set.durationS), arms, failure].filter(Boolean).join(' ');
-  if (set.reps === null) return failure ? 'To failure' : '';
-  return [`${set.reps} reps`, arms, failure].filter(Boolean).join(' ');
+  if (set.reps === null) return failure ? t('To failure') : '';
+  return [t('{n} reps', { n: set.reps }), arms, failure].filter(Boolean).join(' ');
 }
 
 export function formatSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
   const load = formatLoad(set, kind);
   const effort = formatEffort(set, kind);
   if (load && effort) return `${load}${set.durationS != null ? ' · ' : ' × '}${effort}`;
-  return load || effort || 'Set';
+  return load || effort || t('Set');
 }
 
 // A short form that fits on a chip: "20/side × 10", "2×20=40 kg × 10", "BW · 45 s".
 export function shortSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
+  if (kind?.equipment === 'cardio') return set.durationS != null ? formatDurationS(set.durationS) : t('Session');
   let load: string;
-  if (set.weight === null || set.unit === null) load = kind?.equipment === 'barbell' ? 'Bar' : 'BW';
-  else if (kind?.equipment === 'barbell' || kind?.equipment === 'plates') load = `${trim(set.weight)}/side`;
+  if (set.weight === null || set.unit === null) load = kind?.equipment === 'barbell' ? t('Bar') : t('BW');
+  else if (kind?.equipment === 'barbell' || kind?.equipment === 'plates') load = t('{w}/side', { w: trim(set.weight) });
   else if (kind?.equipment === 'dumbbells') load = `2×${trim(set.weight)}=${trim(2 * set.weight)} ${set.unit}`;
-  else if (kind?.equipment === 'bodyweight') load = set.weight === 0 ? 'BW' : `BW+${trim(set.weight)} ${set.unit}`;
+  else if (kind?.equipment === 'bodyweight') load = set.weight === 0 ? t('BW') : `${t('BW')}+${trim(set.weight)} ${set.unit}`;
   else load = `${trim(set.weight)} ${set.unit}`;
-  const arms = kind?.oneArm ? ' each' : '';
+  const arms = kind?.oneArm ? ` ${t('each')}` : '';
   if (set.durationS != null) return `${load} · ${formatDurationS(set.durationS)}${arms}`;
   return set.reps === null ? load : `${load} × ${set.reps}${arms}`;
 }
@@ -234,6 +256,8 @@ export function loadKg(set: ParsedSet, kind: ExerciseKind | null, bodyKg: number
       return said === null ? null : 2 * said;
     case 'bodyweight':
       return bodyKg === null ? (said === null ? null : said) : bodyKg + (said ?? 0);
+    case 'cardio':
+      return null;
     default:
       return said;
   }

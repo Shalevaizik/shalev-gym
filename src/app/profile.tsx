@@ -16,6 +16,7 @@ import {
   type HeightUnit,
   type Sex,
 } from '@/domain/profile';
+import { t } from '@/i18n/core';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { useTheme } from '@/ui/theme';
@@ -71,7 +72,7 @@ export default function ProfileScreen() {
       })
       .catch(() => {
         if (!cancelled) {
-          setError('Your profile could not be loaded.');
+          setError(t('Your profile could not be loaded.'));
           setLoaded(true);
         }
       });
@@ -108,11 +109,11 @@ export default function ProfileScreen() {
     const heightCm = heightUnit === 'cm' ? num(cm) : cmFromFeetInches(num(feet), num(inches) || 0);
     const weightValue = num(weight);
 
-    if (!birthDate) return setError('Enter a real date of birth: day, month and a 4-digit year.');
-    if (!sex) return setError('Choose male or female.');
-    if (!(heightCm >= 100 && heightCm <= 250)) return setError('Enter your height (between 100 and 250 cm, or 3′4″ and 8′2″).');
+    if (!birthDate) return setError(t('Enter a real date of birth: day, month and a 4-digit year.'));
+    if (!sex) return setError(t('Choose male or female.'));
+    if (!(heightCm >= 100 && heightCm <= 250)) return setError(t('Enter your height (between 100 and 250 cm, or 3′4″ and 8′2″).'));
     const kg = toKg(weightValue, weightUnit);
-    if (!(kg >= 30 && kg <= 300)) return setError('Enter your weight (between 30 and 300 kg, or 66 and 660 lb).');
+    if (!(kg >= 30 && kg <= 300)) return setError(t('Enter your weight (between 30 and 300 kg, or 66 and 660 lb).'));
 
     setError(null);
     setSaving(true);
@@ -127,7 +128,7 @@ export default function ProfileScreen() {
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } catch {
-      setError('Your profile could not be saved. Please try again.');
+      setError(t('Your profile could not be saved. Please try again.'));
       setSaving(false);
     }
   }
@@ -176,22 +177,22 @@ export default function ProfileScreen() {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
-          <Text style={[styles.label, { color: theme.text }]}>Date of birth</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('Date of birth')}</Text>
           <View style={styles.row}>
-            {field('Day', day, setDay, 'DD', 2)}
-            {field('Month', month, setMonth, 'MM', 2)}
-            <View style={styles.wide}>{field('Year', year, setYear, 'YYYY', 4)}</View>
+            {field(t('Day'), day, setDay, t('DD'), 2)}
+            {field(t('Month'), month, setMonth, t('MM'), 2)}
+            <View style={styles.wide}>{field(t('Year'), year, setYear, t('YYYY'), 4)}</View>
           </View>
-          {age !== null && <Text style={[styles.hint, { color: theme.textMuted }]}>Age {age}</Text>}
+          {age !== null && <Text style={[styles.hint, { color: theme.textMuted }]}>{t('Age {age}', { age })}</Text>}
 
-          <Text style={[styles.label, { color: theme.text }]}>Sex</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('Sex')}</Text>
           <View style={styles.chips}>
-            <Chip label="Male" onPress={() => setSex('male')} selected={sex === 'male'} />
-            <Chip label="Female" onPress={() => setSex('female')} selected={sex === 'female'} />
+            <Chip label={t('Male')} onPress={() => setSex('male')} selected={sex === 'male'} />
+            <Chip label={t('Female')} onPress={() => setSex('female')} selected={sex === 'female'} />
           </View>
 
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: theme.text }]}>Height</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t('Height')}</Text>
             <View style={styles.chips}>
               <Chip label="cm" onPress={() => switchHeight('cm')} selected={heightUnit === 'cm'} />
               <Chip label="ft / in" onPress={() => switchHeight('ft')} selected={heightUnit === 'ft'} />
@@ -199,25 +200,25 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.row}>
             {heightUnit === 'cm' ? (
-              field('cm', cm, setCm, '180', 3, false, 'Height in cm')
+              field('cm', cm, setCm, '180', 3, false, t('Height in cm'))
             ) : (
               <>
-                {field('feet', feet, setFeet, '5', 1, false, 'Height, feet')}
-                {field('inches', inches, setInches, '11', 2, false, 'Height, inches')}
+                {field(t('feet'), feet, setFeet, '5', 1, false, t('Height, feet'))}
+                {field(t('inches'), inches, setInches, '11', 2, false, t('Height, inches'))}
               </>
             )}
           </View>
 
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: theme.text }]}>Body weight</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t('Body weight')}</Text>
             <View style={styles.chips}>
               <Chip label="kg" onPress={() => switchWeight('kg')} selected={weightUnit === 'kg'} />
               <Chip label="lb" onPress={() => switchWeight('lb')} selected={weightUnit === 'lb'} />
             </View>
           </View>
-          <View style={styles.row}>{field(weightUnit, weight, setWeight, weightUnit === 'kg' ? '80' : '176', 5, true, `Body weight in ${weightUnit}`)}</View>
+          <View style={styles.row}>{field(weightUnit, weight, setWeight, weightUnit === 'kg' ? '80' : '176', 5, true, t('Body weight in {unit}', { unit: weightUnit }))}</View>
           <Text style={[styles.hint, { color: theme.textMuted }]}>
-            Each weight you save is kept with its date, so older workouts use the weight you had then.
+            {t('Each weight you save is kept with its date, so older workouts use the weight you had then.')}
           </Text>
 
           {error && (
@@ -227,7 +228,7 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.save}>
-            <Button busy={saving} icon="checkmark" label="Save" onPress={save} />
+            <Button busy={saving} icon="checkmark" label={t('Save')} onPress={save} />
           </View>
         </View>
       </ScrollView>

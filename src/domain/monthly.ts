@@ -1,6 +1,8 @@
 // The monthly summary (requirements 12, 13 and 19): how much each muscle group was trained, the
 // kind of split, the month's records, and advice for next month.
 
+import { t } from '../i18n/core';
+
 import { formatDurationS } from './equipment';
 import { muscleOf } from './exerciseCatalog';
 import type { LoggedExercise } from './exerciseLog';
@@ -15,7 +17,7 @@ import {
   type BodyWeightEntry,
   type TrainingWorkout,
 } from './training';
-import { workoutTitle } from './workoutTitle';
+import { withoutCardio, workoutTitle } from './workoutTitle';
 
 export type MuscleSummary = {
   muscle: BodyMuscle;
@@ -53,13 +55,14 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export function detectSplit(titles: string[]): string | null {
   if (titles.length === 0) return null;
   const count = { push: 0, pull: 0, legs: 0, upper: 0, full: 0, bro: 0 };
-  for (const title of titles) {
+  for (const full of titles) {
+    const title = withoutCardio(full);
     if (title.startsWith('Push')) count.push++;
     else if (title.startsWith('Pull')) count.pull++;
     else if (title === 'Legs') count.legs++;
     else if (title === 'Upper Body') count.upper++;
     else if (title === 'Full Body') count.full++;
-    else if (title !== 'Workout' && title !== 'Core') count.bro++;
+    else if (title !== 'Workout' && title !== 'Core' && title !== 'Cardio') count.bro++;
   }
   const n = titles.length;
   if (count.push && count.pull && count.legs && (count.push + count.pull + count.legs) / n >= 0.6) return 'Push/Pull/Legs';
@@ -113,14 +116,14 @@ function records(before: TrainingWorkout[], month: TrainingWorkout[], weights: B
     if (!old) continue; // A first time is not a record yet.
     const name = names.get(key) ?? key;
     if (best.loadKg !== null && old.loadKg !== null && best.loadKg > old.loadKg) {
-      found.push({ exercise: name, kind: 'weight', text: `${kgText(best.loadKg)}, up from ${kgText(old.loadKg)}` });
+      found.push({ exercise: name, kind: 'weight', text: t('{now}, up from {before}', { now: kgText(best.loadKg), before: kgText(old.loadKg) }) });
       continue;
     }
     if (best.seconds !== null && old.seconds !== null && best.seconds > old.seconds) {
       found.push({
         exercise: name,
         kind: 'time',
-        text: `${formatDurationS(best.seconds)}, up from ${formatDurationS(old.seconds)}`,
+        text: t('{now}, up from {before}', { now: formatDurationS(best.seconds), before: formatDurationS(old.seconds) }),
       });
       continue;
     }
@@ -130,7 +133,10 @@ function records(before: TrainingWorkout[], month: TrainingWorkout[], weights: B
         found.push({
           exercise: name,
           kind: 'reps',
-          text: `${reps} reps${at > 0 ? ` at ${kgText(at)}` : ''}, up from ${previous}`,
+          text:
+            at > 0
+              ? t('{reps} reps at {kg}, up from {before}', { reps, kg: kgText(at), before: previous })
+              : t('{reps} reps, up from {before}', { reps, before: previous }),
         });
         break;
       }
@@ -227,7 +233,11 @@ function recommend(
   weeks: number,
 ): { keepPlan: boolean; verdict: string; focus: string[] } {
   if (workouts === 0) {
-    return { keepPlan: false, verdict: 'No workouts were logged this month.', focus: ['Aim for two or three workouts a week to get started.'] };
+    return {
+      keepPlan: false,
+      verdict: t('No workouts were logged this month.'),
+      focus: [t('Aim for two or three workouts a week to get started.')],
+    };
   }
   const byMuscle = new Map(muscles.map((m) => [m.muscle, m]));
   const neglected = muscles.filter((m) => m.level === 'neglected' && m.muscle !== 'Forearms');
@@ -237,33 +247,40 @@ function recommend(
   const busiest = [...muscles].sort((a, b) => b.perWeek - a.perWeek)[0];
 
   const focus: string[] = [];
+  const lower = (muscle: string) => (t(muscle) === muscle ? muscle.toLowerCase() : t(muscle));
   if (legsNeglected) {
     focus.push(
-      `Legs are neglected. Add a leg day${busiest && !LEGS.includes(busiest.muscle) ? ` and do a little less ${busiest.muscle.toLowerCase()}` : ''}.`,
+      busiest && !LEGS.includes(busiest.muscle)
+        ? t('Legs are neglected. Add a leg day and do a little less {muscle}.', { muscle: lower(busiest.muscle) })
+        : t('Legs are neglected. Add a leg day.'),
     );
   }
   const otherNeglected = neglected.filter((m) => !(legsNeglected && LEGS.includes(m.muscle)));
   if (otherNeglected.length > 0) {
-    focus.push(`Give more work to ${list(otherNeglected.map((m) => m.muscle.toLowerCase()))}: at least 4 sets a week each.`);
+    focus.push(
+      t('Give more work to {muscles}: at least 4 sets a week each.', { muscles: list(otherNeglected.map((m) => lower(m.muscle))) }),
+    );
   }
   if (overtrained.length > 0) {
-    focus.push(`Ease off ${list(overtrained.map((m) => m.muscle.toLowerCase()))}: over 20 sets a week leaves little room to recover.`);
+    focus.push(
+      t('Ease off {muscles}: over 20 sets a week leaves little room to recover.', { muscles: list(overtrained.map((m) => lower(m.muscle))) }),
+    );
   }
-  if (perWeek < 2) focus.push('Train at least twice a week, so every muscle group gets worked regularly.');
+  if (perWeek < 2) focus.push(t('Train at least twice a week, so every muscle group gets worked regularly.'));
 
   const keepPlan = perWeek >= 2 && neglected.length <= 2 && overtrained.length === 0;
   const verdict = keepPlan
-    ? 'Keep your current plan. Your training is regular and well balanced.'
+    ? t('Keep your current plan. Your training is regular and well balanced.')
     : neglected.length > 4 || legsNeglected
-      ? 'Consider switching your plan, so every muscle group gets regular work.'
-      : 'Keep the plan, with the changes below.';
-  if (focus.length === 0) focus.push('Keep adding a little weight or a rep where you can.');
+      ? t('Consider switching your plan, so every muscle group gets regular work.')
+      : t('Keep the plan, with the changes below.');
+  if (focus.length === 0) focus.push(t('Keep adding a little weight or a rep where you can.'));
   return { keepPlan, verdict, focus };
 }
 
 function list(items: string[]): string {
   if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+  return t('{first} and {last}', { first: items.slice(0, -1).join(', '), last: items.at(-1)! });
 }
 
 // The months that have finished workouts, newest first, for moving between summaries.

@@ -4,7 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { NewExercise } from '@/data/exerciseRepo';
 import type { ChosenPart } from '@/domain/exerciseChoice';
-import { EQUIPMENT_LABEL, formatSetFor, kindFor } from '@/domain/equipment';
+import { equipmentLabel, formatSetFor, kindFor } from '@/domain/equipment';
+import { exerciseName, t } from '@/i18n/core';
+import { muscleName } from '@/i18n/names';
 
 import { Button } from './Button';
 import { haptic } from './haptics';
@@ -19,12 +21,12 @@ function optionsFor(part: ChosenPart): Option[] {
       key: o.name.toLowerCase(),
       name: o.name,
       muscle: o.muscle,
-      note: [o.muscle ?? 'Used before', EQUIPMENT_LABEL[kindFor(o.name).equipment]].join(' · '),
+      note: [o.muscle ? muscleName(o.muscle) : t('Used before'), equipmentLabel(kindFor(o.name).equipment)].join(' · '),
     }));
   const spokenKey = part.spokenName.toLowerCase();
   // When the match is clear, what was said is just a mishearing of it, not a new exercise.
   if (!part.match.confident && !known.some((o) => o.key === spokenKey)) {
-    known.push({ key: spokenKey, name: part.spokenName, muscle: null, note: 'New exercise, as you said it' });
+    known.push({ key: spokenKey, name: part.spokenName, muscle: null, note: t('New exercise, as you said it') });
   }
   return known;
 }
@@ -51,18 +53,18 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
 
   return (
     <View
-      accessibilityLabel="Confirm the exercise"
+      accessibilityLabel={t('Confirm the exercise')}
       style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.accent }]}>
       <View style={styles.titleRow}>
         <Ionicons color={sure ? theme.accent : theme.textMuted} name={sure ? 'checkmark-circle' : unknown ? 'add-circle' : 'help-circle'} size={24} />
         <Text style={[styles.title, { color: theme.text }]}>
           {sure
             ? superset
-              ? 'Superset, got it'
-              : 'Got it'
+              ? t('Superset, got it')
+              : t('Got it')
             : unknown
-              ? 'Add a new exercise?'
-              : 'Did you mean…'}
+              ? t('Add a new exercise?')
+              : t('Did you mean…')}
         </Text>
       </View>
 
@@ -70,7 +72,7 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
         <View key={partIndex} style={styles.part}>
           {superset && (
             <Text style={[styles.partLabel, { color: theme.textMuted }]}>
-              {partIndex === 0 ? 'FIRST' : partIndex === 1 ? 'SECOND' : `EXERCISE ${partIndex + 1}`}
+              {partIndex === 0 ? t('FIRST') : partIndex === 1 ? t('SECOND') : t('EXERCISE {n}', { n: partIndex + 1 })}
             </Text>
           )}
           <View
@@ -81,7 +83,7 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
               return (
                 <Pressable
                   key={option.key}
-                  accessibilityLabel={`${option.name}, ${option.note}`}
+                  accessibilityLabel={`${exerciseName(option.name)}, ${option.note}`}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
                   android_ripple={{ color: theme.ripple }}
@@ -97,7 +99,7 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
                   ]}>
                   <View style={styles.optionText}>
                     <Text style={[optionIndex === 0 ? styles.bestName : styles.optionName, { color: theme.text }]}>
-                      {option.name}
+                      {exerciseName(option.name)}
                     </Text>
                     <Text style={[styles.note, { color: theme.textMuted }]}>{option.note}</Text>
                   </View>
@@ -114,22 +116,24 @@ export function ExerciseConfirm({ parts, superset, busy, onConfirm, onRetry, onC
       ))}
 
       <Text style={[styles.heard, { color: theme.textMuted }]}>
-        You said “{parts.map((p) => p.match.heard || p.spokenName.toLowerCase()).join(' + ')}”
-        {firstSets.length > 0 ? `, and the first set: ${firstSets.map((s) => formatSetFor(s, kindFor(chosen[0].name))).join(', ')}` : ''}
+        {t('You said “{text}”', { text: parts.map((p) => p.match.heard || p.spokenName.toLowerCase()).join(' + ') })}
+        {firstSets.length > 0
+          ? t(', and the first set: {sets}', { sets: firstSets.map((s) => formatSetFor(s, kindFor(chosen[0].name))).join(', ') })
+          : ''}
       </Text>
 
       <Button
         busy={busy}
         icon="checkmark"
-        label={superset ? 'Start superset' : `Start ${chosen[0].name}`}
+        label={superset ? t('Start superset') : t('Start {name}', { name: exerciseName(chosen[0].name) })}
         onPress={() => onConfirm(chosen.map(({ name, muscle }) => ({ name, muscle })))}
       />
       <View style={styles.secondaryRow}>
         <View style={styles.flex}>
-          <Button disabled={busy} icon="mic-outline" label="Say again" onPress={onRetry} variant="secondary" />
+          <Button disabled={busy} icon="mic-outline" label={t('Say again')} onPress={onRetry} variant="secondary" />
         </View>
         <View style={styles.flex}>
-          <Button disabled={busy} label="Cancel" onPress={onCancel} variant="secondary" />
+          <Button disabled={busy} label={t('Cancel')} onPress={onCancel} variant="secondary" />
         </View>
       </View>
     </View>

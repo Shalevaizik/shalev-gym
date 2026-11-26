@@ -1,5 +1,7 @@
 // Shared shapes and helpers for looking back over finished workouts (requirements 11, 13, 16, 19).
 
+import { dateLocale } from '../i18n/core';
+
 import { loadKg, volumeKg } from './equipment';
 import { kindOf, type LoggedExercise, type LoggedSet } from './exerciseLog';
 
@@ -49,7 +51,7 @@ export function shiftMonth(month: string, by: number): string {
 
 export function formatMonth(month: string): string {
   const { start } = monthBounds(month);
-  return start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  return start.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' });
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;

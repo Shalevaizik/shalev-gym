@@ -13,6 +13,7 @@ import {
   groupByDay,
   type Workout,
 } from '@/domain/workout';
+import { t, titleText } from '@/i18n/core';
 import { useTheme } from '@/ui/theme';
 
 // Previous workouts by day, each with its title, time and length (requirement 21).
@@ -37,7 +38,7 @@ export default function WorkoutHistory() {
           setWorkouts(loaded);
           setTitles(named);
         } catch {
-          if (!cancelled) setError('Your workouts could not be loaded.');
+          if (!cancelled) setError(t('Your workouts could not be loaded.'));
         }
       })();
       return () => {
@@ -61,7 +62,7 @@ export default function WorkoutHistory() {
         )}
 
         {workouts !== null && finished.length === 0 && (
-          <Text style={[styles.message, { color: theme.textMuted }]}>Your finished workouts will appear here.</Text>
+          <Text style={[styles.message, { color: theme.textMuted }]}>{t('Your finished workouts will appear here.')}</Text>
         )}
 
         {days.map((day) => (
@@ -70,9 +71,9 @@ export default function WorkoutHistory() {
               {formatDayLabel(day.date, now)}
             </Text>
             {day.workouts.map((workout) => {
-              const title = workout.title ?? titles.get(workout.id) ?? 'Workout';
+              const title = workout.title ?? titleText(titles.get(workout.id) ?? 'Workout');
               const detail = `${formatTime(workout.startedAt)} · ${
-                workout.endReason === 'auto' ? 'ended automatically' : formatDuration(durationMs(workout, now))
+                workout.endReason === 'auto' ? t('ended automatically') : formatDuration(durationMs(workout, now))
               }`;
               return (
                 <Pressable
@@ -99,8 +100,8 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, gap: 4 },
   message: { fontSize: 16, textAlign: 'center', marginTop: 40 },
   day: { marginBottom: 24, gap: 10 },
-  dayLabel: { fontSize: 15, fontWeight: '600' },
-  rowTitle: { fontSize: 18, fontWeight: '700' },
-  rowDetail: { fontSize: 15 },
+  dayLabel: { fontSize: 15, fontWeight: '600', textAlign: 'left' },
+  rowTitle: { fontSize: 18, fontWeight: '700', textAlign: 'left' },
+  rowDetail: { fontSize: 15, textAlign: 'left' },
   pressed: { opacity: 0.7 },
 });

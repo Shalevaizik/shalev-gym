@@ -6,6 +6,7 @@ import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from 're
 import { useAuth } from '@/auth/AuthProvider';
 import { loadTraining } from '@/data/analysisRepo';
 import { summarizeWorkout, summaryText, type WorkoutSummary } from '@/domain/workoutSummary';
+import { count, exerciseName, t, titleText } from '@/i18n/core';
 import { Button } from '@/ui/Button';
 import { useTheme } from '@/ui/theme';
 
@@ -40,7 +41,7 @@ export default function SummaryScreen() {
     try {
       await Share.share({ message: summaryText(summary), title: summary.title });
     } catch {
-      setMessage('Sharing isn’t available here. On your phone, this opens the share menu.');
+      setMessage(t('Sharing isn’t available here. On your phone, this opens the share menu.'));
     }
   }
 
@@ -54,7 +55,7 @@ export default function SummaryScreen() {
   if (summary === null) {
     return (
       <View style={styles.centered}>
-        <Text style={[styles.body, { color: theme.text }]}>This workout could not be found.</Text>
+        <Text style={[styles.body, { color: theme.text }]}>{t('This workout could not be found.')}</Text>
       </View>
     );
   }
@@ -63,25 +64,24 @@ export default function SummaryScreen() {
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.column}>
         <Text accessibilityRole="header" style={[styles.title, { color: theme.text }]}>
-          {summary.title}
+          {titleText(summary.title)}
         </Text>
         <Text style={[styles.when, { color: theme.textMuted }]}>{summary.when}</Text>
         <Text style={[styles.count, { color: theme.textMuted }]}>
-          {summary.exercises.length} {summary.exercises.length === 1 ? 'exercise' : 'exercises'} · {summary.totalSets}{' '}
-          {summary.totalSets === 1 ? 'set' : 'sets'}
+          {count(summary.exercises.length, 'exercise')} · {count(summary.totalSets, 'set')}
         </Text>
 
         {summary.exercises.length === 0 && (
-          <Text style={[styles.body, { color: theme.textMuted }]}>No exercises were logged in this workout.</Text>
+          <Text style={[styles.body, { color: theme.textMuted }]}>{t('No exercises were logged in this workout.')}</Text>
         )}
 
         {summary.exercises.map((exercise, index) => (
           <View key={`${exercise.name}${index}`} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.name, { color: theme.text }]}>
-              {index + 1}. {exercise.name}
+              {index + 1}. {exerciseName(exercise.name)}
             </Text>
             <Text style={[styles.meta, { color: theme.textMuted }]}>
-              {exercise.sets.length} {exercise.sets.length === 1 ? 'set' : 'sets'}
+              {count(exercise.sets.length, 'set')}
               {exercise.note ? ` · ${exercise.note}` : ''}
             </Text>
             {exercise.sets.map((set, k) => (
@@ -94,7 +94,7 @@ export default function SummaryScreen() {
         ))}
 
         <View style={styles.share}>
-          <Button icon="share-outline" label="Share summary" onPress={share} variant="secondary" />
+          <Button icon="share-outline" label={t('Share summary')} onPress={share} variant="secondary" />
           {message && <Text style={[styles.note, { color: theme.textMuted }]}>{message}</Text>}
         </View>
       </View>

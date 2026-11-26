@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { EQUIPMENT_LABEL, formatSetFor } from '@/domain/equipment';
+import { equipmentLabel, formatSetFor } from '@/domain/equipment';
 import { kindOf, type LoggedExercise } from '@/domain/exerciseLog';
 import { formatTime } from '@/domain/workout';
+import { count, exerciseName, t } from '@/i18n/core';
+import { muscleName } from '@/i18n/names';
 
 import { useTheme } from './theme';
 
@@ -17,27 +19,28 @@ type Props = {
 
 export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) {
   const theme = useTheme();
-  const count = exercise.sets.length;
+  const sets = exercise.sets.length;
+  const cardio = exercise.equipment === 'cardio';
   const tags = [
-    exercise.muscle,
-    exercise.equipment && EQUIPMENT_LABEL[exercise.equipment],
-    inSuperset && 'Superset',
-    exercise.technique && capitalize(exercise.technique),
+    exercise.muscle && muscleName(exercise.muscle),
+    exercise.equipment && !cardio && equipmentLabel(exercise.equipment),
+    inSuperset && t('Superset'),
+    exercise.technique && capitalize(t(exercise.technique)),
   ].filter(Boolean) as string[];
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.header}>
         <View style={styles.titleBlock}>
-          <Text style={[styles.name, { color: theme.text }]}>{exercise.name}</Text>
+          <Text style={[styles.name, { color: theme.text }]}>{exerciseName(exercise.name)}</Text>
           <Text style={[styles.meta, { color: theme.textMuted }]}>
-            {[`${count} ${count === 1 ? 'set' : 'sets'}`, ...tags].join(' · ')}
+            {[count(sets, cardio ? 'session' : 'set'), ...tags].join(' · ')}
           </Text>
         </View>
         <View style={styles.actions}>
           {onResume && (
             <Pressable
-              accessibilityLabel={`Add more sets to ${exercise.name}`}
+              accessibilityLabel={t('Add more sets to {name}', { name: exerciseName(exercise.name) })}
               accessibilityRole="button"
               android_ripple={{ color: theme.ripple }}
               hitSlop={8}
@@ -47,13 +50,13 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
             </Pressable>
           )}
           <Pressable
-            accessibilityLabel={`Edit ${exercise.name}`}
+            accessibilityLabel={t('Edit {name}', { name: exerciseName(exercise.name) })}
             accessibilityRole="button"
             android_ripple={{ color: theme.ripple }}
             hitSlop={8}
             onPress={onEdit}
             style={({ pressed }) => [styles.edit, { borderColor: theme.border }, pressed && styles.pressed]}>
-            <Text style={[styles.editLabel, { color: theme.accent }]}>Edit</Text>
+            <Text style={[styles.editLabel, { color: theme.accent }]}>{t('Edit')}</Text>
           </Pressable>
         </View>
       </View>
@@ -64,7 +67,7 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
           <Text style={[styles.setText, { color: theme.text }]}>{formatSetFor(set, kindOf(exercise))}</Text>
           {set.endedAt && (
             <Text
-              accessibilityLabel={`About ${formatTime(set.endedAt)}`}
+              accessibilityLabel={t('About {time}', { time: formatTime(set.endedAt) })}
               style={[styles.setTime, { color: theme.textMuted }]}>
               ~{formatTime(set.endedAt)}
             </Text>
@@ -83,8 +86,8 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 6 },
   titleBlock: { flex: 1, minWidth: 0 },
-  name: { fontSize: 18, fontWeight: '700' },
-  meta: { fontSize: 14, marginTop: 2 },
+  name: { fontSize: 18, fontWeight: '700', textAlign: 'left' },
+  meta: { fontSize: 14, marginTop: 2, textAlign: 'left' },
   actions: { flexDirection: 'row', gap: 8 },
   edit: {
     minHeight: 38,

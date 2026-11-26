@@ -1,5 +1,7 @@
 // The trainer's profile (requirement 20): date of birth, sex, height and dated body weights.
 
+import { dateLocale } from '../i18n/core';
+
 export type Sex = 'male' | 'female';
 export type HeightUnit = 'cm' | 'ft';
 export type BodyWeightUnit = 'kg' | 'lb';
@@ -82,7 +84,7 @@ export function formatBodyWeight(weight: BodyWeight): string {
 
 export function formatBirthDate(birthDate: string): string {
   const [year, month, day] = birthDate.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+  return new Date(year, month - 1, day).toLocaleDateString(dateLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

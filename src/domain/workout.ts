@@ -1,3 +1,5 @@
+import { dateLocale, t } from '../i18n/core';
+
 export type EndReason = 'user' | 'auto';
 
 export type Workout = {
@@ -21,8 +23,7 @@ export type WorkoutDay = {
 // users may never say "end workout").
 export const AUTO_END_IDLE_MS = 6 * 60 * 60 * 1000;
 
-// The interface is English-only for now, so dates match it rather than the device language.
-const DATE_LOCALE = 'en-GB';
+// Dates follow the app's language (English or Hebrew), not the phone's.
 
 export function isStale(workout: Workout, now: Date): boolean {
   return (
@@ -40,8 +41,8 @@ export function formatDuration(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} min`;
-  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+  if (hours === 0) return t('{m} min', { m: minutes });
+  return minutes === 0 ? t('{h} h', { h: hours }) : t('{h} h {m} min', { h: hours, m: minutes });
 }
 
 export function formatClock(ms: number): string {
@@ -77,9 +78,9 @@ export function groupByDay(workouts: Workout[]): WorkoutDay[] {
 export function formatDayLabel(date: Date, now: Date): string {
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  if (dayKey(date) === dayKey(now)) return 'Today';
-  if (dayKey(date) === dayKey(yesterday)) return 'Yesterday';
-  return date.toLocaleDateString(DATE_LOCALE, {
+  if (dayKey(date) === dayKey(now)) return t('Today');
+  if (dayKey(date) === dayKey(yesterday)) return t('Yesterday');
+  return date.toLocaleDateString(dateLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -88,7 +89,7 @@ export function formatDayLabel(date: Date, now: Date): string {
 }
 
 export function formatLongDate(date: Date): string {
-  return date.toLocaleDateString(DATE_LOCALE, {
+  return date.toLocaleDateString(dateLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

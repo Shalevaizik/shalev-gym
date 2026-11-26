@@ -65,3 +65,12 @@ describe('workoutTitle', () => {
     expect(workoutTitle([ex('Bench Press', 0)])).toBe('Chest');
   });
 });
+
+describe('cardio in the title', () => {
+  it('adds cardio to the day’s title, or names a cardio-only workout', () => {
+    expect(workoutTitle([{ name: 'Treadmill', muscle: 'Cardio', sets: 1 }, { name: 'Squat', muscle: 'Quads', sets: 4 }])).toBe(
+      'Legs + Cardio',
+    );
+    expect(workoutTitle([{ name: 'HIIT', muscle: null, sets: 1 }])).toBe('Cardio');
+  });
+});

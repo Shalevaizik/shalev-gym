@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n/core';
 import type { IconName } from '@/ui/Button';
 import { useTheme } from '@/ui/theme';
 
@@ -35,8 +36,8 @@ export default function Analyse() {
         {SECTIONS.map((section) => (
           <Pressable
             key={section.title}
-            accessibilityHint={section.detail}
-            accessibilityLabel={section.title}
+            accessibilityHint={t(section.detail)}
+            accessibilityLabel={t(section.title)}
             accessibilityRole="button"
             android_ripple={{ color: theme.ripple }}
             onPress={() => router.push(section.href)}
@@ -47,8 +48,8 @@ export default function Analyse() {
             ]}>
             <Ionicons color={theme.analyse} name={section.icon} size={30} />
             <View style={styles.text}>
-              <Text style={[styles.title, { color: theme.text }]}>{section.title}</Text>
-              <Text style={[styles.detail, { color: theme.textMuted }]}>{section.detail}</Text>
+              <Text style={[styles.title, { color: theme.text }]}>{t(section.title)}</Text>
+              <Text style={[styles.detail, { color: theme.textMuted }]}>{t(section.detail)}</Text>
             </View>
             <Ionicons color={theme.textMuted} name="chevron-forward" size={22} />
           </Pressable>

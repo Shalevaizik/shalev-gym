@@ -13,7 +13,9 @@ export type Muscle =
   | 'Glutes'
   | 'Calves'
   | 'Core'
-  | 'Full body';
+  | 'Full body'
+  // Cardio and conditioning: logged and shown in the workout, but not on the body map.
+  | 'Cardio';
 
 export type CatalogExercise = { id: string; name: string; muscle: Muscle; aliases?: string[] };
 
@@ -119,6 +121,17 @@ export const CATALOG: CatalogExercise[] = [
   entry('Power Clean', 'Full body', ['clean', 'power cleans']),
   entry('Kettlebell Swing', 'Full body', ['kettlebell swings', 'kb swing']),
   entry('Burpees', 'Full body', ['burpee']),
+  // Cardio and conditioning, logged as a time
+  entry('Treadmill', 'Cardio', ['treadmill walk', 'treadmill run', 'incline walk', 'walking on the treadmill', 'walk', 'walking']),
+  entry('Running', 'Cardio', ['run', 'jog', 'jogging', 'outdoor run']),
+  entry('Stationary Bike', 'Cardio', ['bike', 'exercise bike', 'cycling', 'spin bike', 'spinning', 'spin class', 'assault bike', 'air bike']),
+  entry('Rowing Machine', 'Cardio', ['rower', 'rowing', 'erg', 'rowing erg']),
+  entry('Elliptical', 'Cardio', ['cross trainer', 'elliptical trainer']),
+  entry('Stair Climber', 'Cardio', ['stairmaster', 'stair master', 'stairs', 'stair mill']),
+  entry('HIIT', 'Cardio', ['hiit workout', 'interval training', 'intervals', 'tabata']),
+  entry('CrossFit', 'Cardio', ['crossfit wod', 'wod', 'metcon', 'conditioning', 'cross fit']),
+  entry('Jump Rope', 'Cardio', ['skipping', 'skipping rope', 'jumping rope']),
+  entry('Swimming', 'Cardio', ['swim', 'laps']),
 ];
 
 // ---------------------------------------------------------------------------

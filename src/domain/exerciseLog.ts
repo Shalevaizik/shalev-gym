@@ -170,6 +170,7 @@ function readNumber(words: string[], start: number): { value: number; length: nu
 const TIME_UNITS: Record<string, number> = {
   second: 1, seconds: 1, sec: 1, secs: 1,
   minute: 60, minutes: 60, min: 60, mins: 60,
+  hour: 3600, hours: 3600, hr: 3600, hrs: 3600,
 };
 
 // Spoken and written times become plain numbers of seconds: "1:30", "a minute and a half".
@@ -178,6 +179,9 @@ function spellOutTimes(text: string): string {
     .toLowerCase()
     .replace(/\b(\d{1,2}):([0-5]\d)\b/g, (_, m: string, s: string) => ` ${Number(m) * 60 + Number(s)} seconds `)
     .replace(/\b(a|one) minute and a half\b/g, ' 90 seconds ')
+    .replace(/\b(an|one) hour and a half\b/g, ' 90 minutes ')
+    .replace(/\bhalf an hour\b/g, ' 30 minutes ')
+    .replace(/\b(an|one) hour\b/g, ' 1 hour ')
     .replace(/\bhalf a minute\b/g, ' 30 seconds ')
     .replace(/\b(a|one) minute\b/g, ' 1 minute ')
     .replace(/\b(a|one) plate\b/g, ' 1 plate ')
@@ -279,11 +283,13 @@ export type SetReading = {
 
 // Reads the sets in a stream of number, unit and keyword tokens. In 'set' mode (one exercise is
 // already chosen) "80 for 10" and "80 x 10" without a unit mean 80 of the current unit for 10 reps.
-// In 'time' mode the exercise is held for a time (a plank), so a bare number is seconds.
+// In 'time' mode the exercise is held for a time (a plank), so a bare number is seconds; for cardio
+// (barePerSecond 60) a bare number is minutes.
 export function readSets(
   stream: Token[],
   mode: 'log' | 'set' | 'time' = 'log',
   defaultUnit: WeightUnit = 'kg',
+  barePerSecond = 1,
 ): SetReading {
   const sets: ParsedSet[] = [];
   let technique: Technique | null = null;
@@ -309,7 +315,7 @@ export function readSets(
     }
   };
 
-  // "1 minute 30 seconds" is one time.
+  // "1 minute 30 seconds" and "1 hour 20 minutes" are one time.
   const readDuration = (i: number): { seconds: number; used: number } | null => {
     const token = stream[i];
     const unit = stream[i + 1];
@@ -318,8 +324,8 @@ export function readSets(
     let used = 2;
     const more = stream[i + 2];
     const moreUnit = stream[i + 3];
-    if (unit.seconds === 60 && more?.type === 'num' && moreUnit?.type === 'timeunit' && moreUnit.seconds === 1) {
-      seconds += more.value;
+    if (more?.type === 'num' && moreUnit?.type === 'timeunit' && moreUnit.seconds < unit.seconds) {
+      seconds += more.value * moreUnit.seconds;
       used = 4;
     }
     return { seconds, used };
@@ -366,7 +372,7 @@ export function readSets(
         i += 1;
       } else if (mode === 'time' && next?.type !== 'reps' && next?.type !== 'times' && next?.type !== 'sets') {
         const failure = next?.type === 'failure';
-        push(null, pendingCount ?? 1, failure, token.value);
+        push(null, pendingCount ?? 1, failure, token.value * barePerSecond);
         pendingCount = null;
         i += failure ? 1 : 0;
       } else if (

@@ -4,6 +4,8 @@ import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
 import type { ProgressPoint } from '@/domain/progress';
 
+import { dateLocale, t } from '@/i18n/core';
+
 import { useTheme } from './theme';
 
 type Props = {
@@ -26,7 +28,7 @@ function niceStep(range: number): number {
   return step;
 }
 
-const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
 // One line of the best set per workout, a 2px line with 8px points; the latest and best points
 // carry their value, the rest show it when tapped.
@@ -115,7 +117,7 @@ export function ProgressChart({ points, unit, selected, onSelect }: Props) {
         points.map((p, i) => (
           <Pressable
             key={`hit${i}`}
-            accessibilityLabel={`${shortDate(p.date)}: ${p.label}${p.record ? ', a record' : ''}`}
+            accessibilityLabel={`${shortDate(p.date)}: ${p.label}${p.record ? `, ${t('a record')}` : ''}`}
             accessibilityRole="button"
             onPress={() => onSelect(i)}
             style={[styles.hit, { left: x(i) - 16, top: y(p.value) - 16 }]}

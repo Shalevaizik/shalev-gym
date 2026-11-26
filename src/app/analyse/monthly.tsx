@@ -9,6 +9,10 @@ import { listBodyWeights, loadTraining, markSummarySeen } from '@/data/analysisR
 import { monthlySummary, monthsWithWorkouts } from '@/domain/monthly';
 import { LEVELS, type BodyMuscle } from '@/domain/muscles';
 import { formatMonth, monthKey, shiftMonth, type BodyWeightEntry, type TrainingWorkout } from '@/domain/training';
+import { getProfile } from '@/data/profileRepo';
+import type { Sex } from '@/domain/profile';
+import { count, exerciseName, t } from '@/i18n/core';
+import { muscleName } from '@/i18n/names';
 import { BodyMap, levelColor } from '@/ui/BodyMap';
 import { useTheme, type Theme } from '@/ui/theme';
 
@@ -23,6 +27,7 @@ export default function Monthly() {
   const [data, setData] = useState<{ workouts: TrainingWorkout[]; weights: BodyWeightEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<BodyMuscle | null>(null);
+  const [sex, setSex] = useState<Sex | null>(null);
   const userId = user?.id;
   const now = useMemo(() => new Date(), []);
   const thisMonth = monthKey(now);
@@ -33,7 +38,10 @@ export default function Monthly() {
       let cancelled = false;
       Promise.all([loadTraining(db, userId), listBodyWeights(db, userId)])
         .then(([workouts, weights]) => !cancelled && setData({ workouts, weights }))
-        .catch(() => !cancelled && setError('Your workouts could not be loaded.'));
+        .catch(() => !cancelled && setError(t('Your workouts could not be loaded.')));
+      getProfile(db, userId)
+        .then((profile) => !cancelled && setSex(profile.sex))
+        .catch(() => undefined);
       return () => {
         cancelled = true;
       };
@@ -88,7 +96,7 @@ export default function Monthly() {
       <View style={styles.column}>
         <View style={styles.monthRow}>
           <Pressable
-            accessibilityLabel="Previous month"
+            accessibilityLabel={t('Previous month')}
             accessibilityRole="button"
             hitSlop={10}
             onPress={() => goTo(shiftMonth(month, -1))}
@@ -99,7 +107,7 @@ export default function Monthly() {
             {formatMonth(month)}
           </Text>
           <Pressable
-            accessibilityLabel="Next month"
+            accessibilityLabel={t('Next month')}
             accessibilityRole="button"
             accessibilityState={{ disabled: month >= thisMonth }}
             disabled={month >= thisMonth}
@@ -110,18 +118,19 @@ export default function Monthly() {
           </Pressable>
         </View>
         <Text style={[styles.stats, { color: theme.textMuted }]}>
-          {summary.workouts} {summary.workouts === 1 ? 'workout' : 'workouts'} · {summary.totalSets} sets
-          {month === thisMonth ? ' so far' : ''}
+          {month === thisMonth
+            ? t('{workouts} · {sets} so far', { workouts: count(summary.workouts, 'workout'), sets: count(summary.totalSets, 'set') })
+            : `${count(summary.workouts, 'workout')} · ${count(summary.totalSets, 'set')}`}
         </Text>
 
-        <BodyMap levels={levels} onSelect={setPicked} selected={selected} />
+        <BodyMap levels={levels} onSelect={setPicked} selected={selected} sex={sex} />
 
         <View style={styles.legend}>
           {LEVELS.map((l) => (
             <View key={l.level} style={styles.legendItem}>
               <View style={[styles.swatch, { backgroundColor: levelColor(theme, l.level), borderColor: theme.border }]} />
-              <Text style={[styles.legendText, { color: theme.text }]}>{l.label}</Text>
-              <Text style={[styles.legendDetail, { color: theme.textMuted }]}>{l.detail}</Text>
+              <Text style={[styles.legendText, { color: theme.text }]}>{t(l.label)}</Text>
+              <Text style={[styles.legendDetail, { color: theme.textMuted }]}>{t(l.detail)}</Text>
             </View>
           ))}
         </View>
@@ -131,54 +140,64 @@ export default function Monthly() {
           style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.detailHead}>
             <View style={[styles.swatchLarge, { backgroundColor: levelColor(theme, detail.level), borderColor: theme.border }]} />
-            <Text style={[styles.cardTitle, { color: theme.text }]}>{detail.muscle}</Text>
-            <Text style={[styles.levelText, { color: theme.textMuted }]}>{LEVEL_LABEL[detail.level]}</Text>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{muscleName(detail.muscle)}</Text>
+            <Text style={[styles.levelText, { color: theme.textMuted }]}>{t(LEVEL_LABEL[detail.level])}</Text>
           </View>
           <Text style={[styles.body, { color: theme.text }]}>
-            {detail.perWeek} sets a week · {detail.sets} sets in {detail.workouts}{' '}
-            {detail.workouts === 1 ? 'workout' : 'workouts'}
+            {t('{perWeek} sets a week · {sets} sets in {workouts}', {
+              perWeek: detail.perWeek,
+              sets: detail.sets,
+              workouts: count(detail.workouts, 'workout'),
+            })}
           </Text>
           <Text style={[styles.body, { color: theme.textMuted }]}>
             {detail.topExercises.length > 0
-              ? `Top exercises: ${detail.topExercises.map((e) => `${e.name} (${e.sets})`).join(', ')}`
+              ? t('Top exercises: {list}', {
+                  list: detail.topExercises.map((e) => `${exerciseName(e.name)} (${e.sets})`).join(', '),
+                })
               : detail.sets > 0
-                ? 'Worked only as a helper muscle this month.'
-                : 'Not trained this month.'}
+                ? t('Worked only as a helper muscle this month.')
+                : t('Not trained this month.')}
           </Text>
         </View>
 
-        <Section theme={theme} title="All muscle groups">
+        <Section theme={theme} title={t('All muscle groups')}>
           {summary.muscles.map((m) => (
             <Pressable
               key={m.muscle}
-              accessibilityLabel={`${m.muscle}: ${m.perWeek} sets a week, ${LEVEL_LABEL[m.level]}`}
+              accessibilityLabel={t('{muscle}: {perWeek} sets a week, {level}', {
+                muscle: muscleName(m.muscle),
+                perWeek: m.perWeek,
+                level: t(LEVEL_LABEL[m.level]),
+              })}
               accessibilityRole="button"
               onPress={() => setPicked(m.muscle)}
               style={({ pressed }) => [styles.muscleRow, { borderTopColor: theme.border }, pressed && styles.pressed]}>
               <View style={[styles.swatch, { backgroundColor: levelColor(theme, m.level), borderColor: theme.border }]} />
-              <Text style={[styles.muscleName, { color: theme.text }, m.muscle === selected && styles.bold]}>{m.muscle}</Text>
-              <Text style={[styles.muscleValue, { color: theme.textMuted }]}>{m.perWeek}/wk</Text>
+              <Text style={[styles.muscleName, { color: theme.text }, m.muscle === selected && styles.bold]}>{muscleName(m.muscle)}</Text>
+              <Text style={[styles.muscleValue, { color: theme.textMuted }]}>{t('{n}/wk', { n: m.perWeek })}</Text>
               <Text style={[styles.muscleValue, { color: theme.textMuted }]}>{m.volumeKg > 0 ? `${m.volumeKg.toLocaleString('en-GB')} kg` : '—'}</Text>
             </Pressable>
           ))}
           <Text style={[styles.small, { color: theme.textMuted }]}>
-            Sets a week and weight moved (load × reps). Helper muscles count half.
+            {t('Sets a week and weight moved (load × reps). Helper muscles count half.')}
           </Text>
         </Section>
 
-        <Section theme={theme} title="Workout type">
-          <Text style={[styles.body, { color: theme.text }]}>{summary.split ?? 'No workouts yet'}</Text>
+        <Section theme={theme} title={t('Workout type')}>
+          <Text style={[styles.body, { color: theme.text }]}>{summary.split ? t(summary.split) : t('No workouts yet')}</Text>
         </Section>
 
-        <Section theme={theme} title="Achievements">
+        <Section theme={theme} title={t('Achievements')}>
           {summary.records.length === 0 && !summary.mostRepeated && (
-            <Text style={[styles.body, { color: theme.textMuted }]}>No records this month yet.</Text>
+            <Text style={[styles.body, { color: theme.textMuted }]}>{t('No records this month yet.')}</Text>
           )}
           {summary.records.map((r) => (
             <View key={r.exercise + r.kind} style={styles.bullet}>
               <Ionicons color={theme.analyse} name="trophy" size={18} />
               <Text style={[styles.body, styles.flex, { color: theme.text }]}>
-                <Text style={styles.bold}>{r.exercise}</Text> · {r.kind === 'weight' ? 'weight record' : r.kind === 'reps' ? 'reps record' : 'time record'}: {r.text}
+                <Text style={styles.bold}>{exerciseName(r.exercise)}</Text> ·{' '}
+                {r.kind === 'weight' ? t('weight record') : r.kind === 'reps' ? t('reps record') : t('time record')}: {r.text}
               </Text>
             </View>
           ))}
@@ -186,24 +205,24 @@ export default function Monthly() {
             <View style={styles.bullet}>
               <Ionicons color={theme.analyse} name="repeat" size={18} />
               <Text style={[styles.body, styles.flex, { color: theme.text }]}>
-                Most repeated: <Text style={styles.bold}>{summary.mostRepeated.name}</Text>, in {summary.mostRepeated.workouts}{' '}
-                workouts
+                {t('Most repeated:')} <Text style={styles.bold}>{exerciseName(summary.mostRepeated.name)}</Text>,{' '}
+                {t('in {workouts}', { workouts: count(summary.mostRepeated.workouts, 'workout') })}
               </Text>
             </View>
           )}
         </Section>
 
-        <Section theme={theme} title="Executive summary">
+        <Section theme={theme} title={t('Executive summary')}>
           <Text style={[styles.body, { color: theme.text }]}>
-            <Text style={styles.bold}>Most worked:</Text> {summary.mostWorked.join(', ') || '—'}
+            <Text style={styles.bold}>{t('Most worked:')}</Text> {summary.mostWorked.map(muscleName).join(', ') || '—'}
           </Text>
           <Text style={[styles.body, { color: theme.text }]}>
-            <Text style={styles.bold}>Least worked:</Text> {summary.leastWorked.join(', ')}
+            <Text style={styles.bold}>{t('Least worked:')}</Text> {summary.leastWorked.map(muscleName).join(', ')}
           </Text>
-          <Text style={[styles.small, { color: theme.textMuted }]}>Volume per muscle group is in the list above.</Text>
+          <Text style={[styles.small, { color: theme.textMuted }]}>{t('Volume per muscle group is in the list above.')}</Text>
         </Section>
 
-        <Section theme={theme} title="Next month">
+        <Section theme={theme} title={t('Next month')}>
           <Text style={[styles.body, styles.bold, { color: theme.text }]}>{summary.verdict}</Text>
           {summary.focus.map((line) => (
             <View key={line} style={styles.bullet}>

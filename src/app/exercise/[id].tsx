@@ -20,7 +20,7 @@ import {
   BAR_TYPES,
   barTypeFor,
   DEFAULT_BAR_KG,
-  EQUIPMENT_LABEL,
+  equipmentLabel,
   formatSetFor,
   isOneArm,
   type Equipment,
@@ -31,6 +31,7 @@ import {
   type Technique,
   type WeightUnit,
 } from '@/domain/exerciseLog';
+import { t } from '@/i18n/core';
 import { Button } from '@/ui/Button';
 import { useTheme, type Theme } from '@/ui/theme';
 
@@ -44,9 +45,9 @@ type DraftSet = {
   toFailure: boolean;
 };
 
-const EQUIPMENT_ORDER: Equipment[] = ['barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight'];
+const EQUIPMENT_ORDER: Equipment[] = ['barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight', 'cardio'];
 
-// What the weight field means for each equipment type (requirement 17).
+// What the weight field means for each equipment type (requirement 17). Cardio has no weight.
 const WEIGHT_LABEL: Record<Equipment, string> = {
   barbell: 'Weight per side',
   dumbbells: 'One dumbbell',
@@ -54,7 +55,11 @@ const WEIGHT_LABEL: Record<Equipment, string> = {
   machine: 'Weight',
   plates: 'Weight per side',
   bodyweight: 'Added weight',
+  cardio: 'Weight',
 };
+
+// Cardio sessions are entered in whole minutes; the time is stored in seconds.
+const minutesOf = (seconds: string) => (seconds.trim() ? String(Math.round(Number(seconds) / 60)) : '');
 
 const TECHNIQUES: { value: Technique | null; label: string }[] = [
   { value: null, label: 'Normal' },
@@ -104,6 +109,7 @@ export default function EditExerciseScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const userId = user?.id;
+  const cardio = equipment === 'cardio';
 
   useEffect(() => {
     if (!userId) return;
@@ -122,7 +128,7 @@ export default function EditExerciseScreen() {
         }
       })
       .catch(() => {
-        if (!cancelled) setError('This exercise could not be loaded.');
+        if (!cancelled) setError(t('This exercise could not be loaded.'));
       });
     return () => {
       cancelled = true;
@@ -154,11 +160,11 @@ export default function EditExerciseScreen() {
     if (!userId) return;
     setError(null);
     if (!name.trim()) {
-      setError('Give the exercise a name.');
+      setError(t('Give the exercise a name.'));
       return;
     }
     if (sets.length === 0) {
-      setError('Add at least one set, or delete the exercise.');
+      setError(t('Add at least one set, or delete the exercise.'));
       return;
     }
     const parsed = [];
@@ -166,22 +172,26 @@ export default function EditExerciseScreen() {
       const weight = readWeight(set.weight);
       const reps = readReps(set.reps);
       if (weight === 'invalid') {
-        setError(`Set ${index + 1}: the weight must be a number, or empty for bodyweight.`);
+        setError(t('Set {n}: the weight must be a number, or empty for bodyweight.', { n: index + 1 }));
         return;
       }
       if (reps === 'invalid') {
-        setError(`Set ${index + 1}: reps must be a whole number.`);
+        setError(t('Set {n}: reps must be a whole number.', { n: index + 1 }));
         return;
       }
       const duration = readReps(set.duration);
       if (measure === 'time' && (duration === 'invalid' || duration === null || duration === 0)) {
-        setError(`Set ${index + 1}: enter the time in seconds.`);
+        setError(
+          cardio
+            ? t('Session {n}: enter the time in minutes.', { n: index + 1 })
+            : t('Set {n}: enter the time in seconds.', { n: index + 1 }),
+        );
         return;
       }
       parsed.push({
         id: set.id,
-        weight,
-        unit: weight === null ? null : set.unit,
+        weight: cardio ? null : weight,
+        unit: weight === null || cardio ? null : set.unit,
         reps: measure === 'time' ? null : reps,
         toFailure: set.toFailure,
         ...(measure === 'time' && typeof duration === 'number' && { durationS: duration }),
@@ -189,7 +199,7 @@ export default function EditExerciseScreen() {
     }
     const barKg = readWeight(bar);
     if (equipment === 'barbell' && (barKg === 'invalid' || barKg === null)) {
-      setError('Enter the bar’s weight in kg, for example 20.');
+      setError(t('Enter the bar’s weight in kg, for example 20.'));
       return;
     }
     const kind = equipment
@@ -201,7 +211,7 @@ export default function EditExerciseScreen() {
       await updateExercise(db, userId, id, { name, technique, sets: parsed, kind }, randomUUID);
       router.back();
     } catch {
-      setError('The changes could not be saved. Please try again.');
+      setError(t('The changes could not be saved. Please try again.'));
       setSaving(false);
     }
   }
@@ -213,7 +223,7 @@ export default function EditExerciseScreen() {
       await deleteExercise(db, userId, id);
       router.back();
     } catch {
-      setError('The exercise could not be deleted. Please try again.');
+      setError(t('The exercise could not be deleted. Please try again.'));
       setSaving(false);
     }
   }
@@ -233,7 +243,7 @@ export default function EditExerciseScreen() {
   if (exercise === null) {
     return (
       <View style={styles.centered}>
-        <Text style={[styles.message, { color: theme.text }]}>This exercise could not be found.</Text>
+        <Text style={[styles.message, { color: theme.text }]}>{t('This exercise could not be found.')}</Text>
       </View>
     );
   }
@@ -271,9 +281,9 @@ export default function EditExerciseScreen() {
       style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>Exercise</Text>
+          <Text style={[styles.label, { color: theme.textMuted }]}>{t('Exercise')}</Text>
           <TextInput
-            accessibilityLabel="Exercise name"
+            accessibilityLabel={t('Exercise name')}
             id="exercise-name"
             onChangeText={setName}
             style={inputStyle}
@@ -282,17 +292,20 @@ export default function EditExerciseScreen() {
 
           {exercise.spokenText && (
             <Text style={[styles.heard, { color: theme.textMuted }]}>
-              You said: “{exercise.spokenText}”
+              {t('You said: “{text}”', { text: exercise.spokenText })}
             </Text>
           )}
 
-          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Equipment</Text>
+          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>{t('Equipment')}</Text>
           <View style={styles.chips}>
             {EQUIPMENT_ORDER.map((option) => (
               <Chip
                 key={option}
-                label={EQUIPMENT_LABEL[option]}
-                onPress={() => setEquipment(option)}
+                label={equipmentLabel(option)}
+                onPress={() => {
+                  setEquipment(option);
+                  if (option === 'cardio') setMeasure('time');
+                }}
                 selected={equipment === option}
                 theme={theme}
               />
@@ -300,24 +313,24 @@ export default function EditExerciseScreen() {
           </View>
           {equipment === null && (
             <Text style={[styles.heard, { color: theme.textMuted }]}>
-              Saved before equipment types existed. Pick one to show its weights the new way.
+              {t('Saved before equipment types existed. Pick one to show its weights the new way.')}
             </Text>
           )}
           {equipment === 'barbell' && (
             <View style={styles.barRow}>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Bar</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t('Bar')}</Text>
               <View style={styles.chips}>
                 {BAR_TYPES.map((option) => (
                   <Chip
                     key={option.type}
-                    label={`${option.label} · ${option.kg} kg`}
+                    label={`${t(option.label)} · ${option.kg} kg`}
                     onPress={() => setBar(String(option.kg))}
                     selected={barTypeFor(Number(bar.replace(',', '.'))) === option.type}
                     theme={theme}
                   />
                 ))}
                 <Chip
-                  label="Other"
+                  label={t('Other')}
                   onPress={() => {
                     if (barTypeFor(Number(bar.replace(',', '.'))) !== 'other') setBar('');
                   }}
@@ -329,13 +342,13 @@ export default function EditExerciseScreen() {
           )}
           {equipment === 'barbell' && (
             <View style={styles.barRow}>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Bar weight (kg)</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t('Bar weight (kg)')}</Text>
               <TextInput
-                accessibilityLabel="Bar weight in kg"
+                accessibilityLabel={t('Bar weight in kg')}
                 inputMode="decimal"
                 keyboardType="decimal-pad"
                 onChangeText={setBar}
-                placeholder="e.g. 15"
+                placeholder={t('e.g. 15')}
                 placeholderTextColor={theme.textMuted}
                 style={[inputStyle, styles.barInput]}
                 value={bar}
@@ -343,26 +356,30 @@ export default function EditExerciseScreen() {
             </View>
           )}
 
-          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Measured in</Text>
-          <View style={styles.chips}>
-            <Chip label="Reps" onPress={() => setMeasure('reps')} selected={measure === 'reps'} theme={theme} />
-            <Chip label="Time" onPress={() => setMeasure('time')} selected={measure === 'time'} theme={theme} />
-          </View>
+          {!cardio && (
+            <>
+              <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>{t('Measured in')}</Text>
+              <View style={styles.chips}>
+                <Chip label={t('Reps')} onPress={() => setMeasure('reps')} selected={measure === 'reps'} theme={theme} />
+                <Chip label={t('Time')} onPress={() => setMeasure('time')} selected={measure === 'time'} theme={theme} />
+              </View>
 
-          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Type</Text>
-          <View style={styles.chips}>
-            {TECHNIQUES.map((option) => (
-              <Chip
-                key={option.label}
-                label={option.label}
-                onPress={() => setTechnique(option.value)}
-                selected={technique === option.value}
-                theme={theme}
-              />
-            ))}
-          </View>
+              <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>{t('Type')}</Text>
+              <View style={styles.chips}>
+                {TECHNIQUES.map((option) => (
+                  <Chip
+                    key={option.label}
+                    label={t(option.label)}
+                    onPress={() => setTechnique(option.value)}
+                    selected={technique === option.value}
+                    theme={theme}
+                  />
+                ))}
+              </View>
+            </>
+          )}
 
-          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>Sets</Text>
+          <Text style={[styles.label, styles.section, { color: theme.textMuted }]}>{cardio ? t('Sessions') : t('Sets')}</Text>
           <View style={styles.sets}>
             {sets.map((set, index) => {
               const weight = readWeight(set.weight);
@@ -371,33 +388,38 @@ export default function EditExerciseScreen() {
                   key={set.key}
                   style={[styles.setCard, { borderColor: theme.border, backgroundColor: theme.surface }]}>
                   <View style={styles.setHeader}>
-                    <Text style={[styles.setTitle, { color: theme.text }]}>Set {index + 1}</Text>
+                    <Text style={[styles.setTitle, { color: theme.text }]}>
+                      {cardio ? t('Session {n}', { n: index + 1 }) : t('Set {n}', { n: index + 1 })}
+                    </Text>
                     <Pressable
-                      accessibilityLabel={`Remove set ${index + 1}`}
+                      accessibilityLabel={t('Remove set {n}', { n: index + 1 })}
                       accessibilityRole="button"
                       hitSlop={8}
                       onPress={() => setSets((current) => current.filter((s) => s.key !== set.key))}>
-                      <Text style={[styles.remove, { color: theme.danger }]}>Remove</Text>
+                      <Text style={[styles.remove, { color: theme.danger }]}>{t('Remove')}</Text>
                     </Pressable>
                   </View>
 
                   <View style={styles.fields}>
+                    {!cardio && (
                     <View style={styles.field}>
                       <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>
-                        {equipment ? WEIGHT_LABEL[equipment] : 'Weight'}
+                        {t(equipment ? WEIGHT_LABEL[equipment] : 'Weight')}
                       </Text>
                       <TextInput
-                        accessibilityLabel={`Set ${index + 1} weight`}
+                        accessibilityLabel={t('Set {n} weight', { n: index + 1 })}
                         id={`set-${set.key}-weight`}
                         inputMode="decimal"
                         keyboardType="decimal-pad"
                         onChangeText={(text) => changeSet(set.key, { weight: text })}
-                        placeholder={equipment === 'barbell' ? 'Empty bar' : equipment === 'bodyweight' ? 'None' : equipment ? '' : 'Bodyweight'}
+                        placeholder={equipment === 'barbell' ? t('Empty bar') : equipment === 'bodyweight' ? t('None') : equipment ? '' : t('Bodyweight')}
                         placeholderTextColor={theme.textMuted}
                         style={inputStyle}
                         value={set.weight}
                       />
                     </View>
+                    )}
+                    {!cardio && (
                     <View style={styles.unitToggle}>
                       {(['kg', 'lb'] as const).map((unit) => (
                         <Chip
@@ -409,11 +431,27 @@ export default function EditExerciseScreen() {
                         />
                       ))}
                     </View>
-                    {measure === 'time' ? (
+                    )}
+                    {cardio ? (
                       <View style={styles.field}>
-                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Seconds</Text>
+                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t('Minutes')}</Text>
                         <TextInput
-                          accessibilityLabel={`Set ${index + 1} seconds`}
+                          accessibilityLabel={t('Session {n} minutes', { n: index + 1 })}
+                          id={`set-${set.key}-minutes`}
+                          inputMode="numeric"
+                          keyboardType="number-pad"
+                          onChangeText={(text) =>
+                            changeSet(set.key, { duration: /^\d+$/.test(text.trim()) ? String(Number(text) * 60) : text })
+                          }
+                          style={inputStyle}
+                          value={/^\d+$/.test(set.duration) ? minutesOf(set.duration) : set.duration}
+                        />
+                      </View>
+                    ) : measure === 'time' ? (
+                      <View style={styles.field}>
+                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t('Seconds')}</Text>
+                        <TextInput
+                          accessibilityLabel={t('Set {n} seconds', { n: index + 1 })}
                           id={`set-${set.key}-seconds`}
                           inputMode="numeric"
                           keyboardType="number-pad"
@@ -424,9 +462,9 @@ export default function EditExerciseScreen() {
                       </View>
                     ) : (
                       <View style={styles.field}>
-                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Reps</Text>
+                        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t('Reps')}</Text>
                         <TextInput
-                          accessibilityLabel={`Set ${index + 1} reps`}
+                          accessibilityLabel={t('Set {n} reps', { n: index + 1 })}
                           id={`set-${set.key}-reps`}
                           inputMode="numeric"
                           keyboardType="number-pad"
@@ -439,12 +477,14 @@ export default function EditExerciseScreen() {
                   </View>
 
                   <View style={styles.setFooter}>
+                    {!cardio && (
                     <Chip
-                      label="To failure"
+                      label={t('To failure')}
                       onPress={() => changeSet(set.key, { toFailure: !set.toFailure })}
                       selected={set.toFailure}
                       theme={theme}
                     />
+                    )}
                     {weight !== 'invalid' && (
                       <Text style={[styles.converted, { color: theme.textMuted }]}>
                         {preview(set, weight)}
@@ -457,7 +497,7 @@ export default function EditExerciseScreen() {
           </View>
 
           <View style={styles.addSet}>
-            <Button label="Add set" onPress={addSet} variant="secondary" />
+            <Button label={cardio ? t('Add session') : t('Add set')} onPress={addSet} variant="secondary" />
           </View>
 
           {error && (
@@ -467,16 +507,16 @@ export default function EditExerciseScreen() {
           )}
 
           <View style={styles.actions}>
-            <Button busy={saving && !confirmingDelete} label="Save changes" onPress={save} />
+            <Button busy={saving && !confirmingDelete} label={t('Save changes')} onPress={save} />
             {confirmingDelete ? (
               <>
                 <Text style={[styles.confirmText, { color: theme.text }]}>
-                  Delete {exercise.name} and its sets?
+                  {t('Delete {name} and its sets?', { name: exercise.name })}
                 </Text>
-                <Button busy={saving} label="Yes, delete exercise" onPress={remove} variant="danger" />
+                <Button busy={saving} label={t('Yes, delete exercise')} onPress={remove} variant="danger" />
                 <Button
                   disabled={saving}
-                  label="Keep it"
+                  label={t('Keep it')}
                   onPress={() => setConfirmingDelete(false)}
                   variant="secondary"
                 />
@@ -484,7 +524,7 @@ export default function EditExerciseScreen() {
             ) : (
               <Button
                 disabled={saving}
-                label="Delete exercise"
+                label={t('Delete exercise')}
                 onPress={() => setConfirmingDelete(true)}
                 variant="secondary"
               />

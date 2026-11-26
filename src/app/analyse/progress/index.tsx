@@ -7,6 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthProvider';
 import { loadTraining } from '@/data/analysisRepo';
 import { exercisesDone } from '@/domain/progress';
+import { count, dateLocale, exerciseName, t } from '@/i18n/core';
 import { useTheme } from '@/ui/theme';
 
 // Analyse → Progress: pick an exercise to see how it has improved.
@@ -24,7 +25,7 @@ export default function ProgressList() {
       let cancelled = false;
       loadTraining(db, userId)
         .then((workouts) => !cancelled && setList(exercisesDone(workouts)))
-        .catch(() => !cancelled && setError('Your exercises could not be loaded.'));
+        .catch(() => !cancelled && setError(t('Your exercises could not be loaded.')));
       return () => {
         cancelled = true;
       };
@@ -36,12 +37,12 @@ export default function ProgressList() {
       <View style={styles.column}>
         {error && <Text style={[styles.message, { color: theme.danger }]}>{error}</Text>}
         {list !== null && list.length === 0 && (
-          <Text style={[styles.message, { color: theme.textMuted }]}>Exercises you log will appear here.</Text>
+          <Text style={[styles.message, { color: theme.textMuted }]}>{t('Exercises you log will appear here.')}</Text>
         )}
         {list?.map((item) => (
           <Pressable
             key={item.name}
-            accessibilityLabel={`${item.name}, ${item.workouts} ${item.workouts === 1 ? 'workout' : 'workouts'}`}
+            accessibilityLabel={`${exerciseName(item.name)}, ${count(item.workouts, 'workout')}`}
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/analyse/progress/[name]', params: { name: item.name } })}
             style={({ pressed }) => [
@@ -50,10 +51,12 @@ export default function ProgressList() {
               pressed && styles.pressed,
             ]}>
             <View style={styles.flex}>
-              <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
+              <Text style={[styles.name, { color: theme.text }]}>{exerciseName(item.name)}</Text>
               <Text style={[styles.detail, { color: theme.textMuted }]}>
-                {item.workouts} {item.workouts === 1 ? 'workout' : 'workouts'} · last{' '}
-                {new Date(item.last).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                {count(item.workouts, 'workout')} ·{' '}
+                {t('last {date}', {
+                  date: new Date(item.last).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }),
+                })}
               </Text>
             </View>
             <Ionicons color={theme.textMuted} name="chevron-forward" size={20} />

@@ -1,6 +1,8 @@
 // The workout summary of requirement 11: date and time, the app's title, and each exercise with
 // its number of sets, working weights and reps per set.
 
+import { dateLocale, t } from '../i18n/core';
+
 import { formatSetFor } from './equipment';
 import { kindOf } from './exerciseLog';
 import type { TrainingWorkout } from './training';
@@ -14,15 +16,15 @@ export function summarizeWorkout(workout: TrainingWorkout): WorkoutSummary {
   const done = workout.exercises.filter((e) => e.sets.length > 0);
   const title =
     workout.title ?? workoutTitle(done.map((e) => ({ name: e.name, muscle: e.muscle, sets: e.sets.length })));
-  const day = new Date(workout.startedAt).toLocaleDateString('en-GB', {
+  const day = new Date(workout.startedAt).toLocaleDateString(dateLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
   const when = workout.endedAt
-    ? `${day}, ${formatTime(workout.startedAt)} to ${formatTime(workout.endedAt)}`
-    : `${day}, from ${formatTime(workout.startedAt)}`;
+    ? t('{day}, {start} to {end}', { day, start: formatTime(workout.startedAt), end: formatTime(workout.endedAt) })
+    : t('{day}, from {start}', { day, start: formatTime(workout.startedAt) });
   return {
     title,
     when,

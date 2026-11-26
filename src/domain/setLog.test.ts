@@ -92,3 +92,32 @@ describe('parseSetLog', () => {
     expect(parseSetLog('hello there', null).kind).toBe('not-understood');
   });
 });
+
+describe('cardio sessions', () => {
+  const cardio = (text: string) => parseSetLog(text, null, 'time', true);
+
+  it('reads a bare number as minutes', () => {
+    expect(cardio('20')).toEqual({
+      kind: 'sets',
+      technique: null,
+      sets: [{ weight: null, unit: null, reps: null, toFailure: false, durationS: 1200 }],
+    });
+  });
+
+  it('reads minutes, hours and half hours', () => {
+    const seconds = (text: string) => {
+      const result = cardio(text);
+      return result.kind === 'sets' ? result.sets[0].durationS : result.kind;
+    };
+    expect(seconds('15 minutes')).toBe(900);
+    expect(seconds('an hour')).toBe(3600);
+    expect(seconds('1 hour 20 minutes')).toBe(4800);
+    expect(seconds('half an hour')).toBe(1800);
+    expect(seconds('45 seconds')).toBe(45);
+  });
+
+  it('still understands commands', () => {
+    expect(cardio('next exercise').kind).toBe('next-exercise');
+    expect(cardio('banana').kind).toBe('not-understood');
+  });
+});

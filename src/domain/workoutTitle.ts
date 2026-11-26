@@ -19,14 +19,27 @@ function joinNames(names: string[]): string {
 }
 
 function isMuscle(value: string | null): value is Muscle {
-  return value !== null && [...LEGS, ...UPPER, 'Core', 'Full body'].includes(value);
+  return value !== null && [...LEGS, ...UPPER, 'Core', 'Full body', 'Cardio'].includes(value);
 }
 
+// A cardio session (a treadmill warm-up) adds "+ Cardio" to the title; cardio alone is "Cardio".
 export function workoutTitle(exercises: TitleInput[]): string {
+  const cardio = exercises.some(
+    (e) => (isMuscle(e.muscle) ? e.muscle : muscleOf(e.name)) === 'Cardio',
+  );
+  const title = strengthTitle(exercises);
+  if (!cardio) return title;
+  return title === 'Workout' ? 'Cardio' : `${title} + Cardio`;
+}
+
+// The workout's title without its cardio: "Legs + Cardio" is a Legs day.
+export const withoutCardio = (title: string) => title.replace(/ \+ Cardio$/, '');
+
+function strengthTitle(exercises: TitleInput[]): string {
   const sets = new Map<Muscle, number>();
   for (const exercise of exercises) {
     const muscle = isMuscle(exercise.muscle) ? exercise.muscle : muscleOf(exercise.name);
-    if (!muscle) continue;
+    if (!muscle || muscle === 'Cardio') continue;
     // An exercise chosen but not yet logged still says what the workout was about.
     sets.set(muscle, (sets.get(muscle) ?? 0) + Math.max(1, exercise.sets));
   }

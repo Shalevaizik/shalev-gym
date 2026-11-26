@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { markSummarySeen, monthHasWorkouts, summarySeenMonth } from '@/data/analysisRepo';
 import { dismissWeightReminder, getProfile } from '@/data/profileRepo';
 import { formatMonth, monthKey, shiftMonth } from '@/domain/training';
+import { t } from '@/i18n/core';
 import { closeStaleWorkout, getActiveWorkout } from '@/data/workoutRepo';
 import { needsWeightReminder, type Profile } from '@/domain/profile';
 import { formatTime, type Workout } from '@/domain/workout';
@@ -15,14 +16,14 @@ import { Button } from '@/ui/Button';
 import { SectionButton } from '@/ui/SectionButton';
 import { useTheme } from '@/ui/theme';
 
-// The start screen (requirement 18): Workout, Analyse and Eat.
+// The start screen (requirement 18): Workout, Analyse and Eat, and Challenges (coming soon).
 export default function Start() {
   const db = useSQLiteContext();
   const { user } = useAuth();
   const theme = useTheme();
   const [active, setActive] = useState<Workout | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [eatNotice, setEatNotice] = useState(false);
+  const [soon, setSoon] = useState<'eat' | 'challenges' | null>(null);
   const [readyMonth, setReadyMonth] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const userId = user?.id;
@@ -31,7 +32,7 @@ export default function Start() {
     useCallback(() => {
       if (!userId) return;
       let cancelled = false;
-      setEatNotice(false);
+      setSoon(null);
       (async () => {
         try {
           await closeStaleWorkout(db, userId, new Date());
@@ -48,7 +49,7 @@ export default function Start() {
           // Requirement 12: a finished month's summary is announced until it is opened.
           setReadyMonth(trained && (seen ?? '') < lastMonth ? lastMonth : null);
         } catch {
-          if (!cancelled) setError('Your data could not be loaded.');
+          if (!cancelled) setError(t('Your data could not be loaded.'));
         }
       })();
       return () => {
@@ -79,22 +80,22 @@ export default function Start() {
             <View style={styles.reminderTitleRow}>
               <Ionicons color={theme.analyse} name="body" size={24} />
               <Text style={[styles.reminderTitle, { color: theme.text }]}>
-                Your {formatMonth(readyMonth)} summary is ready
+                {t('Your {month} summary is ready', { month: formatMonth(readyMonth) })}
               </Text>
             </View>
             <Text style={[styles.reminderText, { color: theme.textMuted }]}>
-              See which muscles you trained most, your records, and what to focus on this month.
+              {t('See which muscles you trained most, your records, and what to focus on this month.')}
             </Text>
             <View style={styles.reminderActions}>
               <View style={styles.flex}>
                 <Button
-                  label="Open summary"
+                  label={t('Open summary')}
                   onPress={() => router.push({ pathname: '/analyse/monthly', params: { month: readyMonth } })}
                 />
               </View>
               <View style={styles.flex}>
                 <Button
-                  label="Later"
+                  label={t('Later')}
                   onPress={() => {
                     const month = readyMonth;
                     setReadyMonth(null);
@@ -111,20 +112,20 @@ export default function Start() {
             <View style={styles.reminderTitleRow}>
               <Ionicons color={theme.accent} name={firstTime ? 'person-circle-outline' : 'scale-outline'} size={24} />
               <Text style={[styles.reminderTitle, { color: theme.text }]}>
-                {firstTime ? 'Set up your profile' : 'Time to update your weight'}
+                {firstTime ? t('Set up your profile') : t('Time to update your weight')}
               </Text>
             </View>
             <Text style={[styles.reminderText, { color: theme.textMuted }]}>
               {firstTime
-                ? 'Add your age, height and weight so bodyweight exercises count toward your progress.'
-                : 'It’s been a month. A quick update keeps your bodyweight exercises accurate.'}
+                ? t('Add your age, height and weight so bodyweight exercises count toward your progress.')
+                : t('It’s been a month. A quick update keeps your bodyweight exercises accurate.')}
             </Text>
             <View style={styles.reminderActions}>
               <View style={styles.flex}>
-                <Button label={firstTime ? 'Set up' : 'Update'} onPress={() => router.push('/profile')} />
+                <Button label={firstTime ? t('Set up') : t('Update')} onPress={() => router.push('/profile')} />
               </View>
               <View style={styles.flex}>
-                <Button label="Not now" onPress={notNow} variant="secondary" />
+                <Button label={t('Not now')} onPress={notNow} variant="secondary" />
               </View>
             </View>
           </View>
@@ -132,33 +133,48 @@ export default function Start() {
 
         <SectionButton
           background={theme.accent}
-          detail={active ? `In progress · started at ${formatTime(active.startedAt)}` : 'Start a workout or see past ones'}
+          detail={
+            active
+              ? t('In progress · started at {time}', { time: formatTime(active.startedAt) })
+              : t('Start a workout or see past ones')
+          }
           foreground={theme.onAccent}
           icon="barbell"
-          label="Workout"
+          label={t('Workout')}
           onPress={() => router.push('/workout')}
         />
         <SectionButton
           background={theme.analyse}
-          detail="Summaries, monthly report and progress"
+          detail={t('Summaries, monthly report and progress')}
           foreground={theme.onAnalyse}
           icon="stats-chart"
-          label="Analyse"
+          label={t('Analyse')}
           onPress={() => router.push('/analyse')}
         />
         <SectionButton
           background={theme.eat}
-          badge="Coming soon"
-          detail="Track what you eat"
+          badge={t('Coming soon')}
+          detail={t('Track what you eat')}
           foreground={theme.onEat}
           icon="restaurant"
-          label="Eat"
-          onPress={() => setEatNotice(true)}
+          label={t('Eat')}
+          onPress={() => setSoon('eat')}
+        />
+        <SectionButton
+          background={theme.eat}
+          badge={t('Coming soon')}
+          detail={t('Challenge your friends')}
+          foreground={theme.onEat}
+          icon="trophy"
+          label={t('Challenges')}
+          onPress={() => setSoon('challenges')}
         />
 
-        {eatNotice && (
+        {soon && (
           <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.textMuted }]}>
-            Eat is coming soon. Nutrition tracking will be added in a later version.
+            {soon === 'eat'
+              ? t('Eat is coming soon. Nutrition tracking will be added in a later version.')
+              : t('Challenges are coming in a later version: pick a workout you did and challenge a friend to beat it.')}
           </Text>
         )}
         {error && (

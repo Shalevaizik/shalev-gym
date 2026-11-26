@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '@/auth/AuthProvider';
 import { listBarWeights, setBarWeight, type BarWeight } from '@/data/exerciseRepo';
 import { DEFAULT_BAR_KG, kindFor } from '@/domain/equipment';
+import { exerciseName, t } from '@/i18n/core';
 import { Button } from '@/ui/Button';
 import { useTheme } from '@/ui/theme';
 
@@ -28,7 +29,7 @@ export default function BarWeights() {
 
   useFocusEffect(
     useCallback(() => {
-      load().catch(() => setMessage({ tone: 'error', text: 'Your bar weights could not be loaded.' }));
+      load().catch(() => setMessage({ tone: 'error', text: t('Your bar weights could not be loaded.') }));
     }, [load]),
   );
 
@@ -36,15 +37,15 @@ export default function BarWeights() {
     if (!userId) return;
     const value = Number((drafts[bar.name] ?? '').replace(',', '.'));
     if (!Number.isFinite(value) || value < 0 || value > 100) {
-      setMessage({ tone: 'error', text: `${bar.name}: enter the bar’s weight in kg, between 0 and 100.` });
+      setMessage({ tone: 'error', text: t('{name}: enter the bar’s weight in kg, between 0 and 100.', { name: exerciseName(bar.name) }) });
       return;
     }
     try {
       await setBarWeight(db, userId, bar.name, value);
       await load();
-      setMessage({ tone: 'ok', text: `${bar.name} now uses a ${value} kg bar.` });
+      setMessage({ tone: 'ok', text: t('{name} now uses a {kg} kg bar.', { name: exerciseName(bar.name), kg: value }) });
     } catch {
-      setMessage({ tone: 'error', text: 'The bar weight could not be saved. Please try again.' });
+      setMessage({ tone: 'error', text: t('The bar weight could not be saved. Please try again.') });
     }
   }
 
@@ -53,9 +54,9 @@ export default function BarWeights() {
     try {
       await setBarWeight(db, userId, bar.name, null);
       await load();
-      setMessage({ tone: 'ok', text: `${bar.name} is back to the usual ${kindFor(bar.name).barKg ?? DEFAULT_BAR_KG} kg bar.` });
+      setMessage({ tone: 'ok', text: t('{name} is back to the usual {kg} kg bar.', { name: exerciseName(bar.name), kg: kindFor(bar.name).barKg ?? DEFAULT_BAR_KG }) });
     } catch {
-      setMessage({ tone: 'error', text: 'The bar weight could not be reset. Please try again.' });
+      setMessage({ tone: 'error', text: t('The bar weight could not be reset. Please try again.') });
     }
   }
 
@@ -63,8 +64,10 @@ export default function BarWeights() {
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       <View style={styles.column}>
         <Text style={[styles.intro, { color: theme.textMuted }]}>
-          On a barbell you say the weight per side, and the app adds the bar. Most bars weigh {DEFAULT_BAR_KG} kg; change
-          it here for an EZ bar, a Smith machine or a lighter bar. It applies to that exercise from now on.
+          {t(
+            'On a barbell you say the weight per side, and the app adds the bar. Most bars weigh {kg} kg; change it here for an EZ bar, a Smith machine or a lighter bar. It applies to that exercise from now on.',
+            { kg: DEFAULT_BAR_KG },
+          )}
         </Text>
 
         {message && (
@@ -77,18 +80,18 @@ export default function BarWeights() {
 
         {bars !== null && bars.length === 0 && (
           <Text style={[styles.empty, { color: theme.textMuted }]}>
-            Barbell exercises you do will appear here.
+            {t('Barbell exercises you do will appear here.')}
           </Text>
         )}
 
         {bars?.map((bar) => (
           <View key={bar.name} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.flex}>
-              <Text style={[styles.name, { color: theme.text }]}>{bar.name}</Text>
-              <Text style={[styles.note, { color: theme.textMuted }]}>{bar.own ? 'Your setting' : 'Usual bar'}</Text>
+              <Text style={[styles.name, { color: theme.text }]}>{exerciseName(bar.name)}</Text>
+              <Text style={[styles.note, { color: theme.textMuted }]}>{bar.own ? t('Your setting') : t('Usual bar')}</Text>
             </View>
             <TextInput
-              accessibilityLabel={`${bar.name} bar weight in kg`}
+              accessibilityLabel={t('{name} bar weight in kg', { name: exerciseName(bar.name) })}
               inputMode="decimal"
               keyboardType="decimal-pad"
               maxLength={5}
@@ -99,8 +102,8 @@ export default function BarWeights() {
             />
             <Text style={[styles.unit, { color: theme.textMuted }]}>kg</Text>
             <View style={styles.buttons}>
-              <Button label="Save" onPress={() => save(bar)} variant="secondary" />
-              {bar.own && <Button label="Reset" onPress={() => reset(bar)} variant="plain" />}
+              <Button label={t('Save')} onPress={() => save(bar)} variant="secondary" />
+              {bar.own && <Button label={t('Reset')} onPress={() => reset(bar)} variant="plain" />}
             </View>
           </View>
         ))}

@@ -24,7 +24,13 @@ const NEXT_EXERCISE =
 const UNDO = /^(undo|delete|remove|scratch|cancel)( (that|it|the last|last|the|this))?( set)?( please)?$/;
 const REPEAT = /^((the )?same( (again|set|thing|as (before|last( time)?)))?|again|one more( (the )?same)?|repeat( (that|the last|last)( set)?)?|another( one| set)?( the same)?)( please)?$/;
 
-export function parseSetLog(text: string, previous: ParsedSet | null, measure: 'reps' | 'time' = 'reps'): SetCommand {
+// For cardio a bare number is minutes ("20" is a 20-minute session) and weight isn't asked for.
+export function parseSetLog(
+  text: string,
+  previous: ParsedSet | null,
+  measure: 'reps' | 'time' = 'reps',
+  cardio = false,
+): SetCommand {
   const timed = measure === 'time';
   const plain = text.toLowerCase().replace(/[^a-z'\s]/g, ' ').replace(/\s+/g, ' ').trim();
   const hasDigits = /\d/.test(text);
@@ -45,7 +51,16 @@ export function parseSetLog(text: string, previous: ParsedSet | null, measure: '
   // In a set, "for" joins weight and reps: "80 for 10".
   const tokens = tokenize(text.replace(/\bfor\b/gi, ' x '));
   const defaultUnit: WeightUnit = previous?.unit ?? 'kg';
-  const reading = readSets(setTokens(tokens), timed ? 'time' : 'set', defaultUnit);
+  const reading = readSets(setTokens(tokens), timed || cardio ? 'time' : 'set', defaultUnit, cardio ? 60 : 1);
+
+  if (cardio) {
+    const sets = reading.sets
+      .filter((set) => set.durationS != null)
+      .map((set) => ({ weight: null, unit: null, reps: null, toFailure: false, durationS: set.durationS }));
+    return sets.length > 0
+      ? { kind: 'sets', sets, technique: null }
+      : { kind: 'not-understood', reason: 'I didn’t catch how long. Try “15 minutes” or just “20”.' };
+  }
 
   if (reading.weightOnly) {
     return timed

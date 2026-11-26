@@ -5,7 +5,11 @@ export type Db = Pick<SQLiteDatabase, 'execAsync' | 'getAllAsync' | 'getFirstAsy
 export const DATABASE_NAME = 'shalev-gym.db';
 
 // Each entry upgrades the database by one version. Never edit an entry that has shipped.
-const MIGRATIONS = [
+// An entry that rebuilds a table runs with foreign keys off (SQLite's own steps for changing a
+// table) and checks that every link is intact before it commits.
+type Migration = string | { sql: string; rebuildsTables: true };
+
+const MIGRATIONS: Migration[] = [
   `
   CREATE TABLE workouts (
     id TEXT PRIMARY KEY NOT NULL,
@@ -99,14 +103,65 @@ const MIGRATIONS = [
   `
   ALTER TABLE profiles ADD COLUMN summary_seen_month TEXT;
   `,
+  // Cardio and conditioning (treadmill, HIIT, CrossFit) as an equipment type, logged in time.
+  // SQLite can't change a column's CHECK, so the table is copied into a new one.
+  {
+    rebuildsTables: true,
+    sql: `
+  CREATE TABLE exercises_new (
+    id TEXT PRIMARY KEY NOT NULL,
+    workout_id TEXT NOT NULL REFERENCES workouts (id),
+    user_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    technique TEXT CHECK (technique IN ('pyramid', 'drop set')),
+    superset_group TEXT,
+    spoken_text TEXT,
+    created_at TEXT NOT NULL,
+    muscle TEXT,
+    finished_at TEXT,
+    equipment TEXT
+      CHECK (equipment IN ('barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight', 'cardio')),
+    measure TEXT NOT NULL DEFAULT 'reps' CHECK (measure IN ('reps', 'time')),
+    bar_kg REAL CHECK (bar_kg IS NULL OR bar_kg >= 0)
+  );
+  INSERT INTO exercises_new
+    (id, workout_id, user_id, position, name, technique, superset_group, spoken_text, created_at, muscle,
+     finished_at, equipment, measure, bar_kg)
+  SELECT id, workout_id, user_id, position, name, technique, superset_group, spoken_text, created_at, muscle,
+     finished_at, equipment, measure, bar_kg
+  FROM exercises;
+  DROP TABLE exercises;
+  ALTER TABLE exercises_new RENAME TO exercises;
+  CREATE INDEX exercises_workout ON exercises (workout_id, position);
+  `,
+  },
 ];
 
-export async function migrate(db: Db): Promise<void> {
+// Upgrades the database to the latest version, or only up to `upTo` versions (for tests).
+export async function migrate(db: Db, upTo = MIGRATIONS.length): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const current = row?.user_version ?? 0;
-  for (let version = current; version < MIGRATIONS.length; version++) {
-    await db.execAsync(
-      `BEGIN; ${MIGRATIONS[version]} PRAGMA user_version = ${version + 1}; COMMIT;`,
-    );
+  for (let version = current; version < upTo; version++) {
+    const migration = MIGRATIONS[version];
+    if (typeof migration === 'string') {
+      await db.execAsync(`BEGIN; ${migration} PRAGMA user_version = ${version + 1}; COMMIT;`);
+      continue;
+    }
+    const keys = await db.getFirstAsync<{ foreign_keys: number }>('PRAGMA foreign_keys');
+    await db.execAsync('PRAGMA foreign_keys = OFF;');
+    try {
+      await db.execAsync(`BEGIN; ${migration.sql}`);
+      const broken = await db.getAllAsync('PRAGMA foreign_key_check');
+      if (broken.length > 0) {
+        throw new Error('The database upgrade would break links between workouts, exercises and sets.');
+      }
+      await db.execAsync(`PRAGMA user_version = ${version + 1}; COMMIT;`);
+    } catch (error) {
+      await db.execAsync('ROLLBACK;').catch(() => undefined);
+      throw error;
+    } finally {
+      if (keys?.foreign_keys) await db.execAsync('PRAGMA foreign_keys = ON;');
+    }
   }
 }

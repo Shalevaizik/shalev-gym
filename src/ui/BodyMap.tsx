@@ -51,6 +51,8 @@ type Props = {
   levels: Map<BodyMuscle, MuscleLevel>;
   selected: BodyMuscle | null;
   onSelect: (muscle: BodyMuscle) => void;
+  // Which body to draw; drawn in the next step (realistic male and female bodies).
+  sex?: 'male' | 'female' | null;
 };
 
 // Front and back of the body, each muscle group coloured by how much it was trained

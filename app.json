@@ -42,7 +42,13 @@
         }
       ],
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true
+        }
+      ]
     ],
     "scheme": "shalevgym",
     "extra": {
@@ -55,6 +61,14 @@
         "projectId": "c84357e7-26d2-4b11-9d87-110526be9e89"
       }
     },
-    "owner": "shalevai"
+    "owner": "shalevai",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c84357e7-26d2-4b11-9d87-110526be9e89",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
