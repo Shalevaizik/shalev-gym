@@ -31,6 +31,7 @@ import {
   type Technique,
   type WeightUnit,
 } from '@/domain/exerciseLog';
+import { hasCardioDetails, type CardioDetails } from '@/domain/cardio';
 import { t } from '@/i18n/core';
 import { Button } from '@/ui/Button';
 import { useTheme, type Theme } from '@/ui/theme';
@@ -43,6 +44,23 @@ type DraftSet = {
   reps: string;
   duration: string;
   toFailure: boolean;
+  // A cardio machine's settings (requirement 23), as typed.
+  machine: Record<MachineField, string>;
+};
+
+type MachineField = 'speedKmh' | 'incline' | 'level' | 'distanceKm' | 'calories';
+const MACHINE_FIELDS: { field: MachineField; label: string }[] = [
+  { field: 'speedKmh', label: 'Speed (km/h)' },
+  { field: 'incline', label: 'Incline' },
+  { field: 'level', label: 'Level' },
+  { field: 'distanceKm', label: 'Distance (km)' },
+  { field: 'calories', label: 'Calories' },
+];
+const noMachine = (): Record<MachineField, string> => ({ speedKmh: '', incline: '', level: '', distanceKm: '', calories: '' });
+const machineOf = (details: CardioDetails | null | undefined): Record<MachineField, string> => {
+  const draft = noMachine();
+  for (const { field } of MACHINE_FIELDS) if (details?.[field] != null) draft[field] = String(details[field]);
+  return draft;
 };
 
 const EQUIPMENT_ORDER: Equipment[] = ['barbell', 'dumbbells', 'dumbbell', 'machine', 'plates', 'bodyweight', 'cardio'];
@@ -67,6 +85,16 @@ const TECHNIQUES: { value: Technique | null; label: string }[] = [
   { value: 'drop set', label: 'Drop set' },
 ];
 
+// The settings that were filled in, as numbers; blank or invalid ones are left out.
+function machineDetails(machine: Record<MachineField, string>): CardioDetails | null {
+  const details: CardioDetails = {};
+  for (const { field } of MACHINE_FIELDS) {
+    const value = Number(machine[field].trim().replace(',', '.'));
+    if (machine[field].trim() && Number.isFinite(value) && value >= 0) details[field] = value;
+  }
+  return hasCardioDetails(details) ? details : null;
+}
+
 function toDraft(exercise: LoggedExercise): DraftSet[] {
   const fallbackUnit = exercise.sets.find((s) => s.unit)?.unit ?? 'kg';
   return exercise.sets.map((set) => ({
@@ -77,6 +105,7 @@ function toDraft(exercise: LoggedExercise): DraftSet[] {
     reps: set.reps === null ? '' : String(set.reps),
     duration: set.durationS == null ? '' : String(set.durationS),
     toFailure: set.toFailure,
+    machine: machineOf(set.cardio),
   }));
 }
 
@@ -117,6 +146,11 @@ export default function EditExerciseScreen() {
     getExercise(db, userId, id)
       .then((loaded) => {
         if (cancelled) return;
+        // A HIIT or CrossFit session is changed on its own screen (requirement 24).
+        if (loaded?.session) {
+          router.replace({ pathname: '/workout/session', params: { workoutId: loaded.workoutId, exerciseId: loaded.id } });
+          return;
+        }
         setExercise(loaded);
         if (loaded) {
           setName(loaded.name);
@@ -150,6 +184,7 @@ export default function EditExerciseScreen() {
           unit: last?.unit ?? 'kg',
           reps: last?.reps ?? '',
           duration: last?.duration ?? '',
+          machine: last ? { ...last.machine } : noMachine(),
           toFailure: false,
         },
       ];
@@ -195,6 +230,7 @@ export default function EditExerciseScreen() {
         reps: measure === 'time' ? null : reps,
         toFailure: set.toFailure,
         ...(measure === 'time' && typeof duration === 'number' && { durationS: duration }),
+        ...(cardio && { cardio: machineDetails(set.machine) }),
       });
     }
     const barKg = readWeight(bar);
@@ -258,6 +294,7 @@ export default function EditExerciseScreen() {
         reps: measure === 'time' || reps === 'invalid' ? null : reps,
         toFailure: false,
         ...(measure === 'time' && seconds > 0 && { durationS: seconds }),
+        ...(cardio && { cardio: machineDetails(set.machine) }),
       },
       equipment
         ? {
@@ -475,6 +512,26 @@ export default function EditExerciseScreen() {
                       </View>
                     )}
                   </View>
+                  {cardio && (
+                    <View style={styles.machine}>
+                      {MACHINE_FIELDS.map(({ field, label }) => (
+                        <View key={field} style={styles.machineField}>
+                          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t(label)}</Text>
+                          <TextInput
+                            accessibilityLabel={t(label)}
+                            inputMode="decimal"
+                            keyboardType="decimal-pad"
+                            maxLength={6}
+                            onChangeText={(text) => changeSet(set.key, { machine: { ...set.machine, [field]: text } })}
+                            placeholder="—"
+                            placeholderTextColor={theme.textMuted}
+                            style={inputStyle}
+                            value={set.machine[field]}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  )}
 
                   <View style={styles.setFooter}>
                     {!cardio && (
@@ -587,6 +644,8 @@ const styles = StyleSheet.create({
   remove: { fontSize: 15, fontWeight: '600' },
   fields: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' },
   field: { flexGrow: 1, flexBasis: 100, minWidth: 0, gap: 4 },
+  machine: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
+  machineField: { flexGrow: 1, flexBasis: 90, minWidth: 0, gap: 4 },
   fieldLabel: { fontSize: 13 },
   unitToggle: { flexDirection: 'row', gap: 6, paddingBottom: 6 },
   setFooter: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },

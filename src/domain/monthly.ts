@@ -7,6 +7,7 @@ import { formatDurationS } from './equipment';
 import { muscleOf } from './exerciseCatalog';
 import type { LoggedExercise } from './exerciseLog';
 import { BODY_MUSCLES, levelOf, muscleShares, type BodyMuscle, type MuscleLevel } from './muscles';
+import { sessionMuscleSets } from './session';
 import {
   bodyKgOn,
   kgText,
@@ -180,6 +181,14 @@ export function monthlySummary(
         s.volume += volume * share;
         s.workouts.add(workout.id);
         if (share === 1) s.exercises.set(exercise.name, (s.exercises.get(exercise.name) ?? 0) + exercise.sets.length);
+      }
+      // A HIIT or CrossFit session's movements count at half credit (requirement 24g).
+      if (exercise.session) {
+        for (const [muscle, sets] of sessionMuscleSets(exercise.session)) {
+          const s = stats.get(muscle)!;
+          s.sets += sets;
+          s.workouts.add(workout.id);
+        }
       }
     }
   }

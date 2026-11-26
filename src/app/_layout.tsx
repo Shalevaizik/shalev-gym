@@ -55,6 +55,7 @@ function Routes() {
         <Stack.Screen name="workout/history" options={{ title: t('Previous workouts'), headerRight: menu }} />
         <Stack.Screen name="workout/[id]" options={{ title: t('Workout'), headerRight: menu }} />
         <Stack.Screen name="workout/session-log" options={{ title: t('Session log') }} />
+        <Stack.Screen name="workout/session" options={{ title: t('Session') }} />
         <Stack.Screen name="exercise/[id]" options={{ title: t('Edit exercise') }} />
         <Stack.Screen name="analyse/index" options={{ title: t('Analyse'), headerRight: menu }} />
         <Stack.Screen name="analyse/monthly" options={{ title: t('Monthly summary'), headerRight: menu }} />

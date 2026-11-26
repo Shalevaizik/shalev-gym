@@ -16,6 +16,8 @@ import {
   type Technique,
   type WeightUnit,
 } from '../domain/exerciseLog';
+import { hasCardioDetails, type CardioDetails } from '../domain/cardio';
+import { readSession, writeSession, type SessionDetails } from '../domain/session';
 import type { Db } from './db';
 
 export type ExerciseRow = {
@@ -32,6 +34,8 @@ export type ExerciseRow = {
   equipment: Equipment | null;
   measure: Measure;
   bar_kg: number | null;
+  session?: string | null;
+  routine_id?: string | null;
 };
 
 export type SetRow = {
@@ -44,7 +48,23 @@ export type SetRow = {
   started_at: string | null;
   ended_at: string | null;
   duration_s: number | null;
+  speed_kmh?: number | null;
+  incline?: number | null;
+  level?: number | null;
+  distance_km?: number | null;
+  calories?: number | null;
 };
+
+// The cardio machine's settings of a set, or null when none were said (requirement 23).
+function cardioOf(row: SetRow): CardioDetails | null {
+  const details: CardioDetails = {};
+  if (row.speed_kmh != null) details.speedKmh = row.speed_kmh;
+  if (row.incline != null) details.incline = row.incline;
+  if (row.level != null) details.level = row.level;
+  if (row.distance_km != null) details.distanceKm = row.distance_km;
+  if (row.calories != null) details.calories = row.calories;
+  return hasCardioDetails(details) ? details : null;
+}
 
 const toSet = (row: SetRow): LoggedSet => ({
   id: row.id,
@@ -53,6 +73,7 @@ const toSet = (row: SetRow): LoggedSet => ({
   reps: row.reps,
   toFailure: row.to_failure === 1,
   ...(row.duration_s !== null && { durationS: row.duration_s }),
+  ...(cardioOf(row) && { cardio: cardioOf(row) }),
   startedAt: row.started_at,
   endedAt: row.ended_at,
 });
@@ -77,6 +98,8 @@ export function assemble(exercises: ExerciseRow[], sets: SetRow[]): LoggedExerci
     equipment: row.equipment,
     measure: row.measure,
     barKg: row.bar_kg,
+    session: readSession(row.session ?? null),
+    routineId: row.routine_id ?? null,
     sets: byExercise.get(row.id) ?? [],
   }));
 }
@@ -138,8 +161,9 @@ async function insertSet(
 ) {
   await db.runAsync(
     `INSERT INTO exercise_sets
-       (id, exercise_id, user_id, position, weight, unit, reps, to_failure, started_at, ended_at, duration_s)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, exercise_id, user_id, position, weight, unit, reps, to_failure, started_at, ended_at, duration_s,
+        speed_kmh, incline, level, distance_km, calories)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       exerciseId,
@@ -152,6 +176,11 @@ async function insertSet(
       times.startedAt,
       times.endedAt,
       set.durationS ? Math.round(set.durationS) : null,
+      set.cardio?.speedKmh ?? null,
+      set.cardio?.incline ?? null,
+      set.cardio?.level ?? null,
+      set.cardio?.distanceKm ?? null,
+      set.cardio?.calories ?? null,
     ],
   );
 }
@@ -507,4 +536,96 @@ export async function setBarWeight(db: Db, userId: string, name: string, barKg: 
        AND workout_id IN (SELECT id FROM workouts WHERE ended_at IS NULL)`,
     [barKg ?? kindFor(name).barKg ?? DEFAULT_BAR_KG, userId, key],
   );
+}
+
+// ---------------------------------------------------------------------------
+// HIIT and CrossFit sessions (requirement 24)
+
+export type SessionSave = {
+  // "HIIT", "CrossFit", or the routine's name ("Friday WOD").
+  name: string;
+  details: SessionDetails;
+  durationS: number;
+  routineId: string | null;
+};
+
+// Adds a logged session to the workout as one finished exercise, with its time as its only set,
+// so it shows in the session log and counts like any exercise (requirement 24e). The exercise in
+// progress, if any, is finished first.
+export async function saveSession(
+  db: Db,
+  userId: string,
+  workoutId: string,
+  save: SessionSave,
+  at: Date,
+  newId: () => string,
+): Promise<string> {
+  const name = save.name.trim();
+  if (!name) throw new Error('The session needs a name.');
+  if (!(save.durationS > 0)) throw new Error('The session needs its time.');
+  return inTransaction(db, async () => {
+    await openWorkout(db, userId, workoutId);
+    await closeOpenExercises(db, workoutId, at);
+    const last = await db.getFirstAsync<{ position: number | null }>(
+      'SELECT MAX(position) AS position FROM exercises WHERE workout_id = ?',
+      [workoutId],
+    );
+    const id = newId();
+    await db.runAsync(
+      `INSERT INTO exercises
+         (id, workout_id, user_id, position, name, technique, superset_group, spoken_text, muscle, created_at,
+          finished_at, equipment, measure, bar_kg, session, routine_id)
+       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, 'Cardio', ?, ?, 'cardio', 'time', NULL, ?, ?)`,
+      [
+        id,
+        workoutId,
+        userId,
+        (last?.position ?? -1) + 1,
+        name,
+        at.toISOString(),
+        at.toISOString(),
+        writeSession(save.details),
+        save.routineId,
+      ],
+    );
+    await insertSet(
+      db,
+      newId(),
+      id,
+      userId,
+      0,
+      { weight: null, unit: null, reps: null, toFailure: false, durationS: save.durationS },
+      { startedAt: new Date(at.getTime() - save.durationS * 1000).toISOString(), endedAt: at.toISOString() },
+    );
+    await touchWorkout(db, workoutId, at);
+    return id;
+  });
+}
+
+// Changes a logged session: its name, structure, movements and time. The set keeps its times.
+export async function updateSession(db: Db, userId: string, exerciseId: string, save: SessionSave): Promise<void> {
+  const name = save.name.trim();
+  if (!name) throw new Error('The session needs a name.');
+  if (!(save.durationS > 0)) throw new Error('The session needs its time.');
+  await inTransaction(db, async () => {
+    const existing = await getExercise(db, userId, exerciseId);
+    if (!existing) throw new Error('The session could not be found.');
+    await db.runAsync('UPDATE exercises SET name = ?, session = ?, routine_id = ? WHERE id = ?', [
+      name,
+      writeSession(save.details),
+      save.routineId,
+      exerciseId,
+    ]);
+    const previous = existing.sets[0];
+    await db.runAsync('DELETE FROM exercise_sets WHERE exercise_id = ?', [exerciseId]);
+    await insertSet(
+      db,
+      previous?.id ?? `${exerciseId}-time`,
+      exerciseId,
+      userId,
+      0,
+      { weight: null, unit: null, reps: null, toFailure: false, durationS: save.durationS },
+      { startedAt: previous?.startedAt ?? null, endedAt: previous?.endedAt ?? null },
+    );
+  });
 }

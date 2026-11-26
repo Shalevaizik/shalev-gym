@@ -12,7 +12,6 @@ Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset
 
 ## New ideas
 
-- 2026-11-20: Log cardio and conditioning sessions too, not only reps/weight or time/weight exercises. For example 15 minutes of HIIT, CrossFit or walking on the treadmill at the start of a workout. (1.3.0)
 - 2026-11-21: AI agent features (an AI like Claude built into the app). Ideas, most useful first:
   1. Smarter voice logging: understand messy, natural speech ("three sets of bench, 20 a side, last one I failed at 7", "same as last week but 2.5 heavier") and fix misheard words from context.
   2. Ask your training history: a chat in Analyse ("When did I last train legs?", "How has my bench changed since September?").
@@ -34,7 +33,7 @@ Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset
   - No automatic cutting of exercises when running behind schedule. (1.3.0)
   - Needs internet; cellular data is enough. Without any signal, Manual workout still works.
   - A concrete version of AI idea 3 (Personal coach). (1.3.0)
-- 2026-11-21: Hebrew version of the app, same functionality, for beta testing with a friend (Android). Could be version 1.4.0. (1.3.0)
+- 2026-11-21: Hebrew version of the app, same functionality, for beta testing with a friend (Android). Not in 1.3.0 (Shalev, 2026-11-26): 1.3.0 ships in English. Already in the code, switched off: every screen's text goes through the language layer (`src/i18n/`), dates follow the language, and a language choice in the menu. Still to do: the Hebrew text, Hebrew exercise names, Hebrew voice rules, and checking right-to-left on every screen.
   - One app with a language choice (Hebrew / English) in the profile menu, defaulting to the phone's language. Not a separate app, so every feature reaches both languages. (1.3.0)
   - Translate all screen text (about 18 screen files) and the exercise list (100+ names). Exercise names need care: Israeli gyms mix Hebrew and English (e.g. "לחיצת חזה" vs "בנץ' פרס"). (1.3.0)
   - Right-to-left layout: flip screens, lists, arrows, progress charts and the body map, and check every screen.

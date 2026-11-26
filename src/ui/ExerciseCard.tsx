@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { equipmentLabel, formatSetFor } from '@/domain/equipment';
 import { kindOf, type LoggedExercise } from '@/domain/exerciseLog';
+import { describeMovement, describeStructure, KIND_LABEL } from '@/domain/session';
 import { formatTime } from '@/domain/workout';
 import { count, exerciseName, t } from '@/i18n/core';
 import { muscleName } from '@/i18n/names';
@@ -34,7 +35,9 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
         <View style={styles.titleBlock}>
           <Text style={[styles.name, { color: theme.text }]}>{exerciseName(exercise.name)}</Text>
           <Text style={[styles.meta, { color: theme.textMuted }]}>
-            {[count(sets, cardio ? 'session' : 'set'), ...tags].join(' · ')}
+            {exercise.session
+              ? [KIND_LABEL[exercise.session.kind], describeStructure(exercise.session)].join(' · ')
+              : [count(sets, cardio ? 'session' : 'set'), ...tags].join(' · ')}
           </Text>
         </View>
         <View style={styles.actions}>
@@ -61,10 +64,19 @@ export function ExerciseCard({ exercise, inSuperset, onEdit, onResume }: Props) 
         </View>
       </View>
 
+      {/* A HIIT or CrossFit session lists its movements, then its time (requirement 24e). */}
+      {exercise.session?.movements.map((movement, index) => (
+        <View key={`m${index}`} style={[styles.setRow, { borderTopColor: theme.border }]}>
+          <Text style={[styles.setNumber, { color: theme.textMuted }]}>•</Text>
+          <Text style={[styles.setText, { color: theme.text }]}>{describeMovement(movement)}</Text>
+        </View>
+      ))}
       {exercise.sets.map((set, index) => (
         <View key={set.id} style={[styles.setRow, { borderTopColor: theme.border }]}>
-          <Text style={[styles.setNumber, { color: theme.textMuted }]}>{index + 1}</Text>
-          <Text style={[styles.setText, { color: theme.text }]}>{formatSetFor(set, kindOf(exercise))}</Text>
+          <Text style={[styles.setNumber, { color: theme.textMuted }]}>{exercise.session ? '⏱' : index + 1}</Text>
+          <Text style={[styles.setText, { color: theme.text }]}>
+            {exercise.session ? t('Time: {time}', { time: formatSetFor(set, kindOf(exercise)) }) : formatSetFor(set, kindOf(exercise))}
+          </Text>
           {set.endedAt && (
             <Text
               accessibilityLabel={t('About {time}', { time: formatTime(set.endedAt) })}

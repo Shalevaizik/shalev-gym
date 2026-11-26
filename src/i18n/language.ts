@@ -55,9 +55,13 @@ async function restart() {
   }
 }
 
+// Hebrew is switched off until its text is written (planned after 1.3.0, which ships in English).
+// While off, the app is English and left to right on every phone, and the menu has no language choice.
+export const HEBREW_READY = false;
+
 // Called once before the first screen draws. Returns the language in use.
 export function startLanguage(): Language {
-  const language = savedLanguage() ?? phoneLanguage();
+  const language: Language = HEBREW_READY ? (savedLanguage() ?? phoneLanguage()) : 'en';
   setCurrentLanguage(language);
   const rtl = language === 'he';
 

@@ -35,6 +35,7 @@ import { suggestNext } from '@/domain/suggestions';
 import type { TrainingWorkout } from '@/domain/training';
 import { checkWeight, typicalKg, type WeightDoubt } from '@/domain/weightCheck';
 import { loadTraining } from '@/data/analysisRepo';
+import { listRoutines } from '@/data/routineRepo';
 import { deleteWorkout, endWorkout, getWorkout, renameWorkout } from '@/data/workoutRepo';
 import { correctionKey, muscleOf, searchExercises, type MatchContext } from '@/domain/exerciseCatalog';
 import { bestTranscript, parseExerciseChoice, type ChosenPart } from '@/domain/exerciseChoice';
@@ -56,6 +57,7 @@ import {
   type Workout,
 } from '@/domain/workout';
 import { workoutTitle } from '@/domain/workoutTitle';
+import { isSessionName, routineSaid, sessionTrigger, type Routine, type SessionKind, type Structure } from '@/domain/session';
 import { count, exerciseName, t, titleText } from '@/i18n/core';
 import { muscleName } from '@/i18n/names';
 import { Button } from '@/ui/Button';
@@ -125,6 +127,8 @@ export default function WorkoutScreen() {
   const [error, setError] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Map<string, string>>(new Map());
   const [past, setPast] = useState<TrainingWorkout[]>([]);
+  // Saved HIIT and CrossFit routines (requirement 24f).
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [usual, setUsual] = useState<{ exerciseId: string; kg: number | null } | null>(null);
   const [doubt, setDoubt] = useState<Doubt | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -187,14 +191,16 @@ export default function WorkoutScreen() {
         recentExerciseNames(db, userId),
         getCorrections(db, userId),
         loadTraining(db, userId),
+        listRoutines(db, userId),
       ])
-        .then(([loadedWorkout, loaded, names, fixes, training]) => {
+        .then(([loadedWorkout, loaded, names, fixes, training, saved]) => {
           if (cancelled) return;
           setWorkout(loadedWorkout);
           setExercises(loaded);
           setHistory(names);
           setCorrections(fixes);
           setPast(training.filter((w) => w.id !== id && w.endedAt !== null));
+          setRoutines(saved);
         })
         .catch(() => {
           if (!cancelled) setError(t('This workout could not be loaded.'));
@@ -219,8 +225,28 @@ export default function WorkoutScreen() {
 
   // --- Choosing the exercise -------------------------------------------------------------
 
+  // HIIT and CrossFit open their own screen (requirement 24), new or from a saved routine.
+  const openSession = useCallback(
+    (options: { kind?: SessionKind; structure?: Structure; routineId?: string }) => {
+      haptic.select();
+      setNotice(null);
+      setTyped('');
+      router.push({ pathname: '/workout/session', params: { workoutId: id, ...options } });
+    },
+    [id],
+  );
+
   const readChoice = useCallback(
     (heardText: string, at: Date, fromVoice: boolean, versions: string[] = [heardText]) => {
+      // A saved routine's name, or "HIIT", "CrossFit", "AMRAP"... opens the session screen.
+      for (const version of versions) {
+        const routine = routineSaid(version, routines);
+        if (routine) return openSession({ routineId: routine.id });
+      }
+      for (const version of versions) {
+        const trigger = sessionTrigger(version);
+        if (trigger) return openSession(trigger);
+      }
       // Of the versions the phone heard, use the one that best names an exercise.
       const text = versions.length > 1 ? bestTranscript(versions, history, context) : heardText;
       const result = parseExerciseChoice(text, history, context);
@@ -239,7 +265,7 @@ export default function WorkoutScreen() {
       setTyped('');
       setPending({ parts: result.parts, superset: result.superset, spokenText: text, at });
     },
-    [history, context, say],
+    [history, context, say, routines, openSession],
   );
 
   // When the trainer picks something other than what the app was sure of, or settles a doubt,
@@ -261,6 +287,13 @@ export default function WorkoutScreen() {
 
   async function begin(chosen: NewExercise[], from: Pending | null) {
     if (!userId) return;
+    // Picking "HIIT" or "CrossFit" from a list opens its own screen.
+    const session = chosen.length === 1 && isSessionName(chosen[0].name) ? sessionTrigger(chosen[0].name) : null;
+    if (session) {
+      setPending(null);
+      openSession(session);
+      return;
+    }
     setSaving(true);
     try {
       const at = new Date();
@@ -496,6 +529,10 @@ export default function WorkoutScreen() {
 
   function openEditor(exercise: LoggedExercise) {
     setNotice(null);
+    if (exercise.session) {
+      router.push({ pathname: '/workout/session', params: { workoutId: id, exerciseId: exercise.id } });
+      return;
+    }
     router.push({ pathname: '/exercise/[id]', params: { id: exercise.id } });
   }
 
@@ -808,11 +845,35 @@ export default function WorkoutScreen() {
             </View>
           </View>
         )}
+        {suggestions.length === 0 && !typed && (
+          <View style={styles.recentBlock}>
+            <Text style={[styles.eyebrow, { color: theme.textMuted }]}>{t('HIIT AND CROSSFIT')}</Text>
+            <View style={styles.chips}>
+              {routines.slice(0, compact ? 2 : 3).map((routine) => (
+                <Chip
+                  key={routine.id}
+                  accessibilityLabel={t('Log your routine {name}', { name: routine.name })}
+                  disabled={saving || speech.listening}
+                  icon="bookmark-outline"
+                  label={routine.name}
+                  onPress={() => openSession({ routineId: routine.id })}
+                />
+              ))}
+              <Chip disabled={saving || speech.listening} icon="flash-outline" label={t('HIIT')} onPress={() => openSession({ kind: 'hiit' })} />
+              <Chip
+                disabled={saving || speech.listening}
+                icon="flame-outline"
+                label={t('CrossFit')}
+                onPress={() => openSession({ kind: 'crossfit' })}
+              />
+            </View>
+          </View>
+        )}
         {suggestions.length === 0 && history.length > 0 && !typed && (
           <View style={styles.recentBlock}>
             <Text style={[styles.eyebrow, { color: theme.textMuted }]}>{t('RECENT')}</Text>
             <View style={styles.chips}>
-              {history.slice(0, compact ? 4 : 6).map((name) => (
+              {history.filter((name) => !isSessionName(name) && !routines.some((r) => r.name === name)).slice(0, compact ? 4 : 6).map((name) => (
                 <Chip
                   key={name}
                   accessibilityLabel={t('Start {name}', { name: exerciseName(name) })}

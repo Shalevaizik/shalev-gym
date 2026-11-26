@@ -16,7 +16,7 @@ describe('migrate', () => {
       `INSERT INTO exercise_sets (id, exercise_id, user_id, position, weight, unit, reps) VALUES ('s1', 'e1', 'u1', 0, 40, 'kg', 8)`,
     );
 
-    await migrate(db);
+    await migrate(db, 7);
 
     const exercise = await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM exercises WHERE id = ?', ['e1']);
     expect(exercise).toMatchObject({ name: 'Bench Press', muscle: 'Chest', equipment: 'barbell', bar_kg: 20, finished_at: null });

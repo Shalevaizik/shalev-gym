@@ -111,8 +111,12 @@ export default function SessionLog() {
                 (list[index - 1]?.supersetGroup === exercise.supersetGroup ||
                   list[index + 1]?.supersetGroup === exercise.supersetGroup)
               }
-              onEdit={() => router.push({ pathname: '/exercise/[id]', params: { id: exercise.id } })}
-              onResume={inProgress && exercise.finishedAt !== null && !busy ? () => resume(exercise) : undefined}
+              onEdit={() =>
+                exercise.session
+                  ? router.push({ pathname: '/workout/session', params: { workoutId: id, exerciseId: exercise.id } })
+                  : router.push({ pathname: '/exercise/[id]', params: { id: exercise.id } })
+              }
+              onResume={inProgress && exercise.finishedAt !== null && !exercise.session && !busy ? () => resume(exercise) : undefined}
             />
           </View>
         ))}

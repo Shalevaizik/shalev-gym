@@ -20,6 +20,13 @@ Planned for this version:
 - Protection against uploading Android signing keys or their passwords to GitHub.
 - Expo packages updated to SDK 58, plus expo-font.
 - `IDEAS.md` filled with ideas: cardio logging, AI features, Smart workout, a personal trainer skill, coaching from books, and friend challenges.
+- One-arm exercises (Dumbbell Row, Concentration Curl) count both arms (bug fixed 2026-11-26).
+- Requirement 22: the running workout fits one screen; the session log has its own screen. Done 2026-11-26.
+- Requirement 23: cardio sessions with the machine's settings (speed, incline, level, distance, calories). Done 2026-11-26.
+- Requirement 24: HIIT and CrossFit sessions logged on their own screen, with saved routines and half credit on the body map. Done 2026-11-26.
+- "Coming soon" buttons: Smart workout (needs the AI service) on the Workout screen, and Challenges on the start screen.
+- Automatic updates (EAS Update) set up, so later changes reach the phone without a new install. This build needs a new install, because it adds the update and language modules.
+- In English only. The Hebrew version's groundwork is in the code but switched off (`HEBREW_READY` in `src/i18n/language.ts`); the Hebrew text and voice come in a later version.
 
 ## 1.2.0: Shalev's fixes (2026-11-20)
 

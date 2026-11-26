@@ -1,6 +1,7 @@
 // Reads one spoken set for the exercise already chosen: "80 kg 10 reps", "same weight 8",
 // "80 for 10", "bodyweight 12 to failure". The exercise name is never needed here.
 
+import { hasCardioDetails, readCardioDetails } from './cardio';
 import {
   readSets,
   setTokens,
@@ -48,19 +49,12 @@ export function parseSetLog(
     return { kind: 'not-understood', reason: 'Nothing was heard. Try again a little closer to the phone.' };
   }
 
+  if (cardio) return readCardioSession(text);
+
   // In a set, "for" joins weight and reps: "80 for 10".
   const tokens = tokenize(text.replace(/\bfor\b/gi, ' x '));
   const defaultUnit: WeightUnit = previous?.unit ?? 'kg';
-  const reading = readSets(setTokens(tokens), timed || cardio ? 'time' : 'set', defaultUnit, cardio ? 60 : 1);
-
-  if (cardio) {
-    const sets = reading.sets
-      .filter((set) => set.durationS != null)
-      .map((set) => ({ weight: null, unit: null, reps: null, toFailure: false, durationS: set.durationS }));
-    return sets.length > 0
-      ? { kind: 'sets', sets, technique: null }
-      : { kind: 'not-understood', reason: 'I didn’t catch how long. Try “15 minutes” or just “20”.' };
-  }
+  const reading = readSets(setTokens(tokens), timed ? 'time' : 'set', defaultUnit);
 
   if (reading.weightOnly) {
     return timed
@@ -78,4 +72,20 @@ export function parseSetLog(
     ? reading.sets
     : reading.sets.map((set) => ({ ...set, weight: previous?.weight ?? null, unit: previous?.unit ?? null }));
   return { kind: 'sets', sets, technique: reading.technique };
+}
+
+// A cardio session (requirement 23): its time, and what the machine was set to.
+// "20 minutes speed 6.5 incline 8", "level 10 15 minutes 150 calories", or just "20" (minutes).
+export function readCardioSession(text: string): SetCommand {
+  const { details, rest } = readCardioDetails(text);
+  const reading = readSets(setTokens(tokenize(rest)), 'time', 'kg', 60);
+  const durationS = reading.sets.find((set) => set.durationS != null)?.durationS ?? null;
+  if (durationS === null) {
+    return hasCardioDetails(details)
+      ? { kind: 'not-understood', reason: 'I heard the settings but not how long. Add the time, like “20 minutes”.' }
+      : { kind: 'not-understood', reason: 'I didn’t catch how long. Try “15 minutes” or just “20”.' };
+  }
+  const set: ParsedSet = { weight: null, unit: null, reps: null, toFailure: false, durationS };
+  if (hasCardioDetails(details)) set.cardio = details;
+  return { kind: 'sets', sets: [set], technique: null };
 }

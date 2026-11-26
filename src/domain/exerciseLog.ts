@@ -2,6 +2,8 @@
 // This is the free edition's rule-based reader: it handles the common ways people
 // describe sets, and anything it gets wrong is fixed with the Edit button.
 
+import type { CardioDetails } from './cardio';
+import type { SessionDetails } from './session';
 import { isOneArm, type Equipment } from './equipment';
 
 export type WeightUnit = 'kg' | 'lb';
@@ -14,6 +16,8 @@ export type ParsedSet = {
   toFailure: boolean;
   // Seconds held, for exercises measured in time like a plank (requirement 14).
   durationS?: number | null;
+  // What a cardio machine was set to (requirement 23).
+  cardio?: CardioDetails | null;
 };
 
 // A 20 kg plate is the 45 lb plate, so "two plates" means two of whichever the trainer uses.
@@ -560,6 +564,9 @@ export type LoggedExercise = {
   equipment: Equipment | null;
   measure: 'reps' | 'time';
   barKg: number | null;
+  // A HIIT or CrossFit session (requirement 24), and the saved routine it came from.
+  session?: SessionDetails | null;
+  routineId?: string | null;
   sets: LoggedSet[];
 };
 

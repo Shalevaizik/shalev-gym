@@ -1,6 +1,8 @@
 // Reads what the trainer says to choose the next exercise: "bench press", "next is squats",
 // "curls superset with pushdowns", or a name with its first set, "bench press 80 kg 10".
 
+import { hasCardioDetails, readCardioDetails } from './cardio';
+import { kindFor } from './equipment';
 import { cleanSpokenName, matchExercise, type ExerciseMatch, type MatchContext } from './exerciseCatalog';
 import {
   nameWordsOf,
@@ -68,11 +70,20 @@ export function bestTranscript(texts: string[], history: string[] = [], context:
   return best;
 }
 
-export function parseExerciseChoice(text: string, history: string[] = [], context: MatchContext = {}): ExerciseChoice {
+export function parseExerciseChoice(
+  text: string,
+  history: string[] = [],
+  context: MatchContext = {},
+  readSettings = true,
+): ExerciseChoice {
   const plain = text.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
   if (END_WORKOUT.test(plain)) return { kind: 'end-workout' };
 
-  const tokens = tokenize(cleanSpokenName(text));
+  // A cardio machine said with its settings, "treadmill 20 minutes speed 6.5 incline 8"
+  // (requirement 23): the settings are read first, so the rest names the machine and the time.
+  const cardio = readCardioDetails(text);
+  const withSettings = readSettings && hasCardioDetails(cardio.details);
+  const tokens = tokenize(cleanSpokenName(withSettings ? cardio.rest : text));
   const superset = tokens.some((t) => t.type === 'superset');
   const segments = superset ? splitSuperset(tokens) : [tokens];
 
@@ -80,13 +91,19 @@ export function parseExerciseChoice(text: string, history: string[] = [], contex
   for (const segment of segments) {
     const words = nameWordsOf(segment).filter((w) => !['exercise', 'please', 'is'].includes(w));
     if (words.length === 0) continue;
-    const reading = readSets(setTokens(segment));
-    parts.push({
-      match: matchExercise(words.join(' '), history, context),
-      spokenName: titleCase(words),
-      sets: reading.weightOnly ? [] : reading.sets,
-      technique: reading.technique,
-    });
+    const match = matchExercise(words.join(' '), history, context);
+    const isCardio = kindFor(match.best?.name ?? titleCase(words)).equipment === 'cardio';
+    // For cardio a number on its own is minutes ("treadmill 20").
+    const reading = isCardio ? readSets(setTokens(segment), 'time', 'kg', 60) : readSets(setTokens(segment));
+    const sets = reading.weightOnly ? [] : reading.sets;
+    if (isCardio && withSettings) {
+      for (const set of sets) set.cardio = cardio.details;
+    }
+    parts.push({ match, spokenName: titleCase(words), sets, technique: reading.technique });
+  }
+  // Settings said with something that isn't cardio were part of its name after all.
+  if (withSettings && !parts.some((part) => kindFor(part.match.best?.name ?? part.spokenName).equipment === 'cardio')) {
+    return parseExerciseChoice(text, history, context, false);
   }
 
   if (parts.length === 0) {

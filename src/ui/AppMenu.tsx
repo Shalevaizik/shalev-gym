@@ -9,7 +9,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { getProfile } from '@/data/profileRepo';
 import { ageOn, formatBodyWeight, formatHeight, type Profile } from '@/domain/profile';
 import { currentLanguage, dateLocale, t, type Language } from '@/i18n/core';
-import { changeLanguage } from '@/i18n/language';
+import { changeLanguage, HEBREW_READY } from '@/i18n/language';
 
 import { Button } from './Button';
 import { useTheme } from './theme';
@@ -154,6 +154,8 @@ export function AppMenu() {
               <Ionicons color={theme.textMuted} name="chevron-forward" size={20} />
             </Pressable>
 
+            {HEBREW_READY && (
+            <>
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
             <View style={styles.settingRow}>
@@ -184,6 +186,8 @@ export function AppMenu() {
               })}
             </View>
             <Text style={[styles.small, { color: theme.textMuted }]}>{t('The app restarts in the language you pick.')}</Text>
+            </>
+            )}
 
             {accountsEnabled && (
               <>

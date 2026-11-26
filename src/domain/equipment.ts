@@ -4,6 +4,7 @@
 
 import { t } from '../i18n/core';
 
+import { cardioParts } from './cardio';
 import { formatWeight, toKg, toLb, type ParsedSet, type WeightUnit } from './exerciseLog';
 
 // cardio: cardio and conditioning sessions (treadmill, HIIT, CrossFit), logged as a time.
@@ -214,6 +215,9 @@ export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
 function formatEffort(set: ParsedSet, kind: ExerciseKind | null): string {
   const failure = set.toFailure ? t('to failure') : '';
   const arms = kind?.oneArm ? t('each arm') : '';
+  if (kind?.equipment === 'cardio') {
+    return [set.durationS != null ? formatDurationS(set.durationS) : '', ...cardioParts(set.cardio)].filter(Boolean).join(' · ');
+  }
   if (set.durationS != null) return [formatDurationS(set.durationS), arms, failure].filter(Boolean).join(' ');
   if (set.reps === null) return failure ? t('To failure') : '';
   return [t('{n} reps', { n: set.reps }), arms, failure].filter(Boolean).join(' ');
@@ -228,7 +232,10 @@ export function formatSetFor(set: ParsedSet, kind: ExerciseKind | null): string 
 
 // A short form that fits on a chip: "20/side × 10", "2×20=40 kg × 10", "BW · 45 s".
 export function shortSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
-  if (kind?.equipment === 'cardio') return set.durationS != null ? formatDurationS(set.durationS) : t('Session');
+  if (kind?.equipment === 'cardio') {
+    const parts = [set.durationS != null ? formatDurationS(set.durationS) : '', ...cardioParts(set.cardio).slice(0, 2)];
+    return parts.filter(Boolean).join(' · ') || t('Session');
+  }
   let load: string;
   if (set.weight === null || set.unit === null) load = kind?.equipment === 'barbell' ? t('Bar') : t('BW');
   else if (kind?.equipment === 'barbell' || kind?.equipment === 'plates') load = t('{w}/side', { w: trim(set.weight) });

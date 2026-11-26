@@ -136,6 +136,25 @@ const MIGRATIONS: Migration[] = [
   CREATE INDEX exercises_workout ON exercises (workout_id, position);
   `,
   },
+  // Cardio machine settings (requirement 23), and HIIT and CrossFit sessions and their saved
+  // routines (requirement 24). A session's structure and movements are kept as text (JSON).
+  `
+  ALTER TABLE exercise_sets ADD COLUMN speed_kmh REAL CHECK (speed_kmh IS NULL OR speed_kmh >= 0);
+  ALTER TABLE exercise_sets ADD COLUMN incline REAL;
+  ALTER TABLE exercise_sets ADD COLUMN level REAL CHECK (level IS NULL OR level >= 0);
+  ALTER TABLE exercise_sets ADD COLUMN distance_km REAL CHECK (distance_km IS NULL OR distance_km >= 0);
+  ALTER TABLE exercise_sets ADD COLUMN calories REAL CHECK (calories IS NULL OR calories >= 0);
+  ALTER TABLE exercises ADD COLUMN session TEXT;
+  ALTER TABLE exercises ADD COLUMN routine_id TEXT;
+  CREATE TABLE routines (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    details TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX routines_user ON routines (user_id, updated_at DESC);
+  `,
 ];
 
 // Upgrades the database to the latest version, or only up to `upTo` versions (for tests).
