@@ -24,27 +24,27 @@ Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset
   Needs internet, a small online service to keep the AI key out of the app (goes with the Phase 2 Supabase work), and a small running cost per use. Suggested start: 1 or 2.
 - 2026-11-21: A "Shalev's personal trainer" skill for Claude: a written briefing Claude reads before coaching. It covers goals, experience, limits, schedule and equipment; training style (cardio warm-up then weights, voice logging, heavy-rock music); how to coach and progress weights, and plan around races (like the Lehavim 3K); and how to read the workout history from this app. Could later be the brain behind the in-app Personal coach (AI idea 3).
 - 2026-11-21: Base the coaching on Shalev's weightlifting books (PDFs). Keep the PDFs in a separate **private** repo (this repo is public, so the books can't go here). Claude reads them once and writes the key principles into the trainer skill (programming, progression, technique cues), noting the book and chapter for each.
-- 2026-11-21: "New workout" offers two choices: **Manual workout** (same as today) or **Smart workout** (AI).
-  - Smart: the user asks the agent to suggest today's workout and sets how much time they have (e.g. 45 minutes).
-  - The agent looks at what was already trained this week and suggests a workout type (e.g. legs) with a list of exercises that fits the time.
-  - The user controls the list: reorder exercises (e.g. when a machine is busy), and remove, add or swap exercises.
-  - Machine busy: the user taps "busy" and the agent offers a variation that works the same muscles at the same intensity, with a matching working weight (e.g. leg press busy → hack squat; cable fly busy → dumbbell fly). The user can also choose to just do it later instead.
-  - Suggests a working weight for each exercise, based on the user's history.
-  - The time covers everything: the agent plans a full package (warm-up, exercises, sets, rest, and cardio if wanted) that fits inside it.
-  - No automatic cutting of exercises when running behind schedule.
+- 2026-11-21: "New workout" offers two choices: **Manual workout** (same as today) or **Smart workout** (AI). (1.3.0)
+  - Smart: the user asks the agent to suggest today's workout and sets how much time they have (e.g. 45 minutes). (1.3.0)
+  - The agent looks at what was already trained this week and suggests a workout type (e.g. legs) with a list of exercises that fits the time. (1.3.0)
+  - The user controls the list: reorder exercises (e.g. when a machine is busy), and remove, add or swap exercises. (1.3.0)
+  - Machine busy: the user taps "busy" and the agent offers a variation that works the same muscles at the same intensity, with a matching working weight (e.g. leg press busy → hack squat; cable fly busy → dumbbell fly). The user can also choose to just do it later instead. (1.3.0)
+  - Suggests a working weight for each exercise, based on the user's history. (1.3.0)
+  - The time covers everything: the agent plans a full package (warm-up, exercises, sets, rest, and cardio if wanted) that fits inside it. (1.3.0)
+  - No automatic cutting of exercises when running behind schedule. (1.3.0)
   - Needs internet; cellular data is enough. Without any signal, Manual workout still works.
   - A concrete version of AI idea 3 (Personal coach). (1.3.0)
-- 2026-11-21: Hebrew version of the app, same functionality, for beta testing with a friend (Android). Could be version 1.4.0.
-  - One app with a language choice (Hebrew / English) in the profile menu, defaulting to the phone's language. Not a separate app, so every feature reaches both languages.
-  - Translate all screen text (about 18 screen files) and the exercise list (100+ names). Exercise names need care: Israeli gyms mix Hebrew and English (e.g. "לחיצת חזה" vs "בנץ' פרס").
+- 2026-11-21: Hebrew version of the app, same functionality, for beta testing with a friend (Android). Could be version 1.4.0. (1.3.0)
+  - One app with a language choice (Hebrew / English) in the profile menu, defaulting to the phone's language. Not a separate app, so every feature reaches both languages. (1.3.0)
+  - Translate all screen text (about 18 screen files) and the exercise list (100+ names). Exercise names need care: Israeli gyms mix Hebrew and English (e.g. "לחיצת חזה" vs "בנץ' פרס"). (1.3.0)
   - Right-to-left layout: flip screens, lists, arrows, progress charts and the body map, and check every screen.
-  - Hebrew dates and numbers (e.g. "יום שישי, 27 בנובמבר").
+  - Hebrew dates and numbers (e.g. "יום שישי, 27 בנובמבר"). (1.3.0)
   - Voice logging, the biggest piece: switch speech recognition to Hebrew (`src/voice/useSpeechToText.ts`, currently `en-US`), then teach the app to understand Hebrew phrases ("עשרים כל צד", "דקה וחצי", numbers spoken as words). Two ways, to decide:
-    - **Rules** written in the app, like today's English ones in `src/domain/exerciseLog.ts`: free to run, works offline, more work to build.
+    - **Rules** written in the app, like today's English ones in `src/domain/exerciseLog.ts`: free to run, works offline, more work to build.(1.3.0)
     - **AI** (AI idea 1, smarter voice logging): understands Hebrew naturally, less to build; needs internet and costs a few agorot per log (about $5 of credit would likely last two testers a couple of months), plus the small online service from Phase 2.
-  - Beta on Android: a free test build from the existing EAS "preview" profile, shared as a link (the friend allows "install from unknown sources"). Optional later: Google Play internal testing ($25 one-time) for installs and updates from the Play Store.
-  - Each tester's workouts stay on their own phone; no running costs without AI.
-  - Before the first beta install, set up **automatic updates** (EAS Update): later changes, including adding AI, reach the friend's app the next time it opens, with no new link or reinstall. Free on Expo's free plan at this scale. It must be in the app from the first install, since updates only reach an app that can receive them. Changes that add native pieces (e.g. camera features) still need a new install link; installing over the old app keeps the friend's workouts.
+  - Beta on Android: a free test build from the existing EAS "preview" profile, shared as a link (the friend allows "install from unknown sources"). Optional later: Google Play internal testing ($25 one-time) for installs and updates from the Play Store. (1.3.0)
+  - Each tester's workouts stay on their own phone; no running costs without AI. (1.3.0)
+  - Before the first beta install, set up **automatic updates** (EAS Update): later changes, including adding AI, reach the friend's app the next time it opens, with no new link or reinstall. Free on Expo's free plan at this scale. It must be in the app from the first install, since updates only reach an app that can receive them. Changes that add native pieces (e.g. camera features) still need a new install link; installing over the old app keeps the friend's workouts. (1.3.0)
   - **Back up the Android signing key** (the keystore and its passwords, kept on Shalev's computer, never on GitHub) somewhere safe, e.g. a password manager or a private cloud folder. Android only accepts updates signed with the same key: if it's lost, testers must uninstall (losing their workouts) and install fresh.
 - 2026-11-23: Specialised AI models from Hugging Face, next to Claude. The small online service (the "one door") sends each job to the best tool, so each piece can be swapped on its own.
   - **Better Hebrew speech recognition:** a Hebrew-trained speech-to-text model instead of the phone's built-in recognition. Only if testing the Hebrew version shows the phone mishears gym words. This improves *hearing* (sound → words); understanding the words stays with rules or Claude.
@@ -65,13 +65,13 @@ Not in 1.3.0: design changes come in a future version (Shalev, 2026-11-23).
   - Start with the start screen, the workout screen and Analyse; one shared set of colours and tiles in `src/ui/theme.ts` so every screen follows.
   - Check: text must stay easy to read in a bright gym and with sweaty hands (contrast, big tap targets); frosted blur can be slow on older Android phones, so have a plain fallback; it must also work right to left for the Hebrew version.
   - The references are other people's designs: use them for style, not copied. Any athlete photos must be our own or free to use.
-- 2026-11-23: A realistic body map, based on four new references in the "design ideas" folder ("body 1 male", "Body map 2- male", "Body map 3- female", "Body map 4- female").
-  - Today's heat map (requirement 19, `src/ui/BodyMap.tsx`) draws the body from rounded rectangles. The references show a real body outline with each muscle drawn in its true shape: front and back (reference 3 also has a side view), with the worked muscles coloured and the rest grey.
-  - **Male and female bodies:** show the one that matches the sex in the user's profile (requirement 20a).
-  - **More detailed muscles** where it helps training decisions, e.g. lats vs. traps, front vs. side vs. rear shoulders, glutes, hamstrings and calves. Reference 2 labels individual muscles; that much anatomy is probably too much for the app, but a muscle could show its name when tapped (requirement 19d).
-  - **A recovery view** (reference 4, a dark screen): the body coloured by how recently each muscle was trained, with "days since your last workout" and "fresh muscle groups" counts, and a Start workout button. Fits the guiding principle (flexibility first) and the Smart workout: the user sees which muscles are ready before choosing today's workout.
+- 2026-11-23: A realistic body map, based on four new references in the "design ideas" folder ("body 1 male", "Body map 2- male", "Body map 3- female", "Body map 4- female"). (1.3.0)
+  - Today's heat map (requirement 19, `src/ui/BodyMap.tsx`) draws the body from rounded rectangles. The references show a real body outline with each muscle drawn in its true shape: front and back (reference 3 also has a side view), with the worked muscles coloured and the rest grey. (1.3.0)
+  - **Male and female bodies:** show the one that matches the sex in the user's profile (requirement 20a). (1.3.0)
+  - **More detailed muscles** where it helps training decisions, e.g. lats vs. traps, front vs. side vs. rear shoulders, glutes, hamstrings and calves. Reference 2 labels individual muscles; that much anatomy is probably too much for the app, but a muscle could show its name when tapped (requirement 19d). (1.3.0)
+  - **A recovery view** (reference 4, a dark screen): the body coloured by how recently each muscle was trained, with "days since your last workout" and "fresh muscle groups" counts, and a Start workout button. Fits the guiding principle (flexibility first) and the Smart workout: the user sees which muscles are ready before choosing today's workout. 
   - Fits the Design idea above: dark background, one accent colour for the worked muscles.
-  - References 1–3 are stock images (Adobe Stock and Alamy watermarks) and reference 4 is from another app: use them for style only. The body drawing must be drawn for this app or come from a source that's free to use.
+  - References 1–3 are stock images (Adobe Stock and Alamy watermarks) and reference 4 is from another app: use them for style only. The body drawing must be drawn for this app or come from a source that's free to use. (1.3.0)
 
 ## Coming soon
 
