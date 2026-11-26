@@ -5,6 +5,7 @@ import {
   loadKg,
   saysEzBar,
   shortSetFor,
+  volumeKg,
   type ExerciseKind,
 } from './equipment';
 import type { ParsedSet } from './exerciseLog';
@@ -122,5 +123,31 @@ describe('EZ bar', () => {
     expect(barTypeFor(10)).toBe('ez');
     expect(barTypeFor(15)).toBe('other');
     expect(barTypeFor(null)).toBe('other');
+  });
+});
+
+describe('one-arm exercises', () => {
+  const ROW = kindFor('Dumbbell Row');
+
+  it('knows which exercises are done one arm at a time', () => {
+    expect(ROW.oneArm).toBe(true);
+    expect(kindFor('Concentration Curl').oneArm).toBe(true);
+    expect(kindFor('One-Arm Cable Row').oneArm).toBe(true);
+    expect(kindFor('Single Arm Dumbbell Press').oneArm).toBe(true);
+    // One dumbbell held with both hands is not one-arm.
+    for (const name of ['Goblet Squat', 'Overhead Tricep Extension', 'Kettlebell Swing', 'Russian Twist']) {
+      expect(kindFor(name).oneArm).toBeUndefined();
+    }
+  });
+
+  it('shows the reps as done with each arm', () => {
+    expect(formatSetFor(set(16, 'kg', 12), ROW)).toBe('16 kg (35.3 lb) × 12 reps each arm');
+    expect(shortSetFor(set(16, 'kg', 12), ROW)).toBe('16 kg × 12 each');
+  });
+
+  it('counts both arms toward volume, but not toward the heaviest weight', () => {
+    expect(loadKg(set(16, 'kg', 12), ROW, null)).toBe(16);
+    expect(volumeKg(set(16, 'kg', 12), ROW, null)).toBe(16 * 12 * 2);
+    expect(volumeKg(set(20, 'kg', 10), DUMBBELLS, null)).toBe(400);
   });
 });

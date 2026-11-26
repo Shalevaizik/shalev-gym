@@ -22,6 +22,7 @@ import {
   DEFAULT_BAR_KG,
   EQUIPMENT_LABEL,
   formatSetFor,
+  isOneArm,
   type Equipment,
   type Measure,
 } from '@/domain/equipment';
@@ -248,7 +249,14 @@ export default function EditExerciseScreen() {
         toFailure: false,
         ...(measure === 'time' && seconds > 0 && { durationS: seconds }),
       },
-      equipment ? { equipment, measure, barKg: Number(bar.replace(',', '.')) || DEFAULT_BAR_KG } : null,
+      equipment
+        ? {
+            equipment,
+            measure,
+            barKg: Number(bar.replace(',', '.')) || DEFAULT_BAR_KG,
+            ...(isOneArm(exercise.name) && { oneArm: true as const }),
+          }
+        : null,
     );
   };
 

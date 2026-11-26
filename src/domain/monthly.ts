@@ -11,6 +11,7 @@ import {
   monthBounds,
   monthKey,
   setLoadKg,
+  setVolumeKg,
   type BodyWeightEntry,
   type TrainingWorkout,
 } from './training';
@@ -166,10 +167,7 @@ export function monthlySummary(
       entry.workouts.add(workout.id);
       repeated.set(key, entry);
 
-      const volume = exercise.sets.reduce((sum, set) => {
-        const load = setLoadKg(set, exercise, body);
-        return sum + (load !== null && set.reps !== null ? load * set.reps : 0);
-      }, 0);
+      const volume = exercise.sets.reduce((sum, set) => sum + setVolumeKg(set, exercise, body), 0);
       for (const [muscle, share] of muscleShares(exercise.name, exercise.muscle ?? muscleOf(exercise.name))) {
         const s = stats.get(muscle)!;
         s.sets += exercise.sets.length * share;

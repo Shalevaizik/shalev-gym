@@ -1,6 +1,6 @@
 // Shared shapes and helpers for looking back over finished workouts (requirements 11, 13, 16, 19).
 
-import { loadKg } from './equipment';
+import { loadKg, volumeKg } from './equipment';
 import { kindOf, type LoggedExercise, type LoggedSet } from './exerciseLog';
 
 export type TrainingWorkout = {
@@ -24,6 +24,10 @@ export function bodyKgOn(weights: BodyWeightEntry[], iso: string): number | null
 
 export function setLoadKg(set: LoggedSet, exercise: LoggedExercise, bodyKg: number | null): number | null {
   return loadKg(set, kindOf(exercise), bodyKg);
+}
+
+export function setVolumeKg(set: LoggedSet, exercise: LoggedExercise, bodyKg: number | null): number {
+  return volumeKg(set, kindOf(exercise), bodyKg);
 }
 
 // "2026-11" for the trainer's local calendar month of a moment.

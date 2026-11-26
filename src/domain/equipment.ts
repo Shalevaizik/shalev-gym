@@ -47,7 +47,21 @@ export function saysEzBar(text: string | null | undefined): boolean {
   return !!text && /\b(ez|e[ .-]?z|easy)[ -]?bar\b/i.test(text);
 }
 
-export type ExerciseKind = { equipment: Equipment; measure: Measure; barKg: number | null };
+// oneArm: done one arm at a time, like a one-arm dumbbell row. The reps said were done with each
+// arm, so the set shows "each arm" and counts twice toward volume.
+export type ExerciseKind = { equipment: Equipment; measure: Measure; barKg: number | null; oneArm?: true };
+
+// Exercises done one arm at a time. Those that hold one dumbbell with both hands (goblet squat,
+// overhead tricep extension, kettlebell swing, Russian twist) are not.
+const ONE_ARM = new Set(['dumbbell row', 'concentration curl']);
+
+export function isOneArm(name: string): boolean {
+  const key = name.trim().toLowerCase();
+  return ONE_ARM.has(key) || /\b(one|single|1)[ -]?arm(ed)?\b/.test(key);
+}
+
+const withArms = (kind: ExerciseKind, name: string): ExerciseKind =>
+  isOneArm(name) ? { ...kind, oneArm: true } : kind;
 
 // The catalog's exercises. Anything else is guessed from its name (see kindFor).
 const KNOWN: Record<string, [Equipment, Measure?, number?]> = {
@@ -118,7 +132,7 @@ export function kindFor(name: string): ExerciseKind {
   const known = KNOWN[key];
   if (known) {
     const [equipment, measure = 'reps', barKg] = known;
-    return { equipment, measure, barKg: equipment === 'barbell' ? (barKg ?? DEFAULT_BAR_KG) : null };
+    return withArms({ equipment, measure, barKg: equipment === 'barbell' ? (barKg ?? DEFAULT_BAR_KG) : null }, name);
   }
   const has = (pattern: RegExp) => pattern.test(key);
   const measure: Measure = has(/\b(plank|hold|hang|wall sit|l-?sit|isometric)\b/) ? 'time' : 'reps';
@@ -132,7 +146,7 @@ export function kindFor(name: string): ExerciseKind {
     equipment = 'bodyweight';
   }
   const barKg = equipment === 'barbell' ? (has(/\bez\b/) || saysEzBar(key) ? EZ_BAR_KG : DEFAULT_BAR_KG) : null;
-  return { equipment, measure, barKg };
+  return withArms({ equipment, measure, barKg }, name);
 }
 
 // ---------------------------------------------------------------------------
@@ -176,16 +190,17 @@ export function formatLoad(set: ParsedSet, kind: ExerciseKind | null): string {
   }
 }
 
-function formatEffort(set: ParsedSet): string {
+function formatEffort(set: ParsedSet, kind: ExerciseKind | null): string {
   const failure = set.toFailure ? 'to failure' : '';
-  if (set.durationS != null) return [formatDurationS(set.durationS), failure].filter(Boolean).join(' ');
+  const arms = kind?.oneArm ? 'each arm' : '';
+  if (set.durationS != null) return [formatDurationS(set.durationS), arms, failure].filter(Boolean).join(' ');
   if (set.reps === null) return failure ? 'To failure' : '';
-  return [`${set.reps} reps`, failure].filter(Boolean).join(' ');
+  return [`${set.reps} reps`, arms, failure].filter(Boolean).join(' ');
 }
 
 export function formatSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
   const load = formatLoad(set, kind);
-  const effort = formatEffort(set);
+  const effort = formatEffort(set, kind);
   if (load && effort) return `${load}${set.durationS != null ? ' · ' : ' × '}${effort}`;
   return load || effort || 'Set';
 }
@@ -198,8 +213,9 @@ export function shortSetFor(set: ParsedSet, kind: ExerciseKind | null): string {
   else if (kind?.equipment === 'dumbbells') load = `2×${trim(set.weight)}=${trim(2 * set.weight)} ${set.unit}`;
   else if (kind?.equipment === 'bodyweight') load = set.weight === 0 ? 'BW' : `BW+${trim(set.weight)} ${set.unit}`;
   else load = `${trim(set.weight)} ${set.unit}`;
-  if (set.durationS != null) return `${load} · ${formatDurationS(set.durationS)}`;
-  return set.reps === null ? load : `${load} × ${set.reps}`;
+  const arms = kind?.oneArm ? ' each' : '';
+  if (set.durationS != null) return `${load} · ${formatDurationS(set.durationS)}${arms}`;
+  return set.reps === null ? load : `${load} × ${set.reps}${arms}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,4 +237,12 @@ export function loadKg(set: ParsedSet, kind: ExerciseKind | null, bodyKg: number
     default:
       return said;
   }
+}
+
+// Weight moved in a set, load × reps, for volume (requirement 13). A one-arm exercise was done with
+// each arm, so it counts twice.
+export function volumeKg(set: ParsedSet, kind: ExerciseKind | null, bodyKg: number | null): number {
+  const load = loadKg(set, kind, bodyKg);
+  if (load === null || set.reps === null) return 0;
+  return load * set.reps * (kind?.oneArm ? 2 : 1);
 }

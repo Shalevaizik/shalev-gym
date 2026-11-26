@@ -2,7 +2,7 @@
 // This is the free edition's rule-based reader: it handles the common ways people
 // describe sets, and anything it gets wrong is fixed with the Edit button.
 
-import type { Equipment } from './equipment';
+import { isOneArm, type Equipment } from './equipment';
 
 export type WeightUnit = 'kg' | 'lb';
 export type Technique = 'pyramid' | 'drop set';
@@ -558,8 +558,8 @@ export type LoggedExercise = {
 };
 
 // The equipment and measure of a saved exercise, or null when it was saved before they existed.
-export function kindOf(exercise: Pick<LoggedExercise, 'equipment' | 'measure' | 'barKg'>) {
-  return exercise.equipment
-    ? { equipment: exercise.equipment, measure: exercise.measure, barKg: exercise.barKg }
-    : null;
+export function kindOf(exercise: Pick<LoggedExercise, 'name' | 'equipment' | 'measure' | 'barKg'>) {
+  if (!exercise.equipment) return null;
+  const kind = { equipment: exercise.equipment, measure: exercise.measure, barKg: exercise.barKg };
+  return isOneArm(exercise.name) ? { ...kind, oneArm: true as const } : kind;
 }
