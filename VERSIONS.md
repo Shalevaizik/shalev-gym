@@ -26,6 +26,7 @@ Planned for this version:
 - Requirement 24: HIIT and CrossFit sessions logged on their own screen, with saved routines and half credit on the body map. Done 2026-11-26.
 - "Coming soon" buttons: Smart workout (needs the AI service) on the Workout screen, and Challenges on the start screen.
 - Automatic updates (EAS Update) set up, so later changes reach the phone without a new install. This build needs a new install, because it adds the update and language modules.
+- Not in 1.3.0: the realistic male and female body map (moved to 1.4.0).
 - In English only. The Hebrew version's groundwork is in the code but switched off (`HEBREW_READY` in `src/i18n/language.ts`); the Hebrew text and voice come in a later version.
 
 ## 1.2.0: Shalev's fixes (2026-11-20)
