@@ -85,6 +85,25 @@ export default function SessionScreen() {
   const [error, setError] = useState<string | null>(null);
   const editing = !!params.exerciseId;
 
+  // The structure already sets the time, except For Time (how long the rounds took): rounds × (work
+  // + rest) for Intervals and Tabata, and the clock for EMOM and AMRAP. Null when it must be typed.
+  const setTime = ((): number | null => {
+    if (structure === 'intervals' || structure === 'tabata') {
+      const w = number(work) ?? 0;
+      const r = number(rest) ?? 0;
+      const n = number(rounds);
+      return n && w + r > 0 ? (n * (w + r)) / 60 : null;
+    }
+    if (structure === 'emom' || structure === 'amrap') return number(clock);
+    return null;
+  })();
+  const fixedTime = structure !== 'for-time';
+  const timeText = (m: number) => {
+    const total = Math.round(m * 60);
+    const s = total % 60;
+    return s === 0 ? `${total / 60} min` : `${Math.floor(total / 60)} min ${s} s`;
+  };
+
   function apply(details: SessionDetails) {
     setKind(details.kind);
     setStructure(details.structure);
@@ -184,8 +203,14 @@ export default function SessionScreen() {
     setError(null);
     const named = movements.filter((m) => m.name.trim());
     if (named.length === 0) return setError('Add at least one movement with the + button.');
-    const time = number(minutes);
-    if (!time) return setError('Enter how long the session took, in minutes.');
+    const time = fixedTime ? setTime : number(minutes);
+    if (!time) {
+      return setError(
+        fixedTime
+          ? 'Fill in the structure (work, rest and rounds, or the clock) so the session time can be worked out.'
+          : 'Enter how long the session took, in minutes.',
+      );
+    }
     if (saveAs && !routineName.trim()) return setError('Give the routine a name, or untick Save as routine.');
 
     const details: SessionDetails = {
@@ -390,7 +415,22 @@ export default function SessionScreen() {
           </Section>
 
           <Section theme={theme} title="SESSION TIME">
-            {field('How long it took', minutes, setMinutes, 'min')}
+            {fixedTime ? (
+              <Text accessibilityLiveRegion="polite" style={[styles.body, { color: theme.text }]}>
+                {setTime ? (
+                  <>
+                    <Text style={styles.bold}>{timeText(setTime)}</Text>
+                    {structure === 'intervals' || structure === 'tabata'
+                      ? `, from ${number(rounds)} rounds × (${number(work) ?? 0} s work + ${number(rest) ?? 0} s rest)`
+                      : ', the clock you set above'}
+                  </>
+                ) : (
+                  'Worked out from the structure above once it’s filled in.'
+                )}
+              </Text>
+            ) : (
+              field('How long it took', minutes, setMinutes, 'min')
+            )}
           </Section>
 
           <Section theme={theme} title="ROUTINE">
