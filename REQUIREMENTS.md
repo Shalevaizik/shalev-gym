@@ -113,3 +113,18 @@ Source: `App Req.docx`. Numbering matches the source document, so references suc
     - d. Nothing is hidden behind the phone's notch, camera cut-out, status bar or bottom navigation bar
     - e. When the keyboard opens for typing, the text input and its button stay visible above it
     - f. Text and buttons keep a readable size and big enough tap targets on small phones, and use the extra space on large ones
+23. Cardio sessions on machines will record the machine, the time and how hard it was set:
+    - a. The type of cardio: treadmill, rowing machine, stationary bike, stepper (stair climber), elliptical, running, swimming, jump rope and similar
+    - b. The time of the session, e.g. "20 minutes". A number said on its own means minutes (e.g. "20")
+    - c. How hard it was set, depending on the machine: speed and incline on a treadmill (e.g. "speed 6.5 incline 8"), or the level / difficulty setting on a bike, stepper, rower or elliptical (e.g. "level 10")
+    - d. Optionally, the distance and calories when the machine shows them (e.g. "2 km", "150 calories")
+    - e. All of it can be said in one go, e.g. "treadmill 20 minutes speed 6.5 incline 8", or typed, and changed afterwards on the Edit exercise screen
+    - f. Shown in the workout as one line, e.g. "Treadmill · 20 min · 6.5 km/h · incline 8"
+24. HIIT and CrossFit sessions will be logged on their own screen (logged only: the app does not run a timer or switch between work and rest):
+    - a. Saying or typing "HIIT", "CrossFit", "WOD", "AMRAP", "EMOM" or "Tabata" opens the session screen
+    - b. Structure, picked from a list: Intervals (work time, rest time, rounds), Tabata, EMOM (every minute on the minute), AMRAP (as many rounds as possible) or For Time. The structure's settings are recorded as part of the session
+    - c. Movements: a + button adds a movement from a searchable list (recent ones first), or a new one typed by the user. Each movement has its amount: reps, weight, calories, distance or time, e.g. barbell snatch 20 kg, slam ball 16 kg, 20 burpees, 45 calories on the bike. Movements can be changed or removed
+    - d. The session time: how long the session took, e.g. "20 minutes". No separate result is recorded; the movements' reps and the session time are the record
+    - e. Saving adds the session to the workout like any other exercise, and returns to logging. The Session log (requirement No. 22c) shows its structure, movements and time
+    - f. Saved routines: a session can be saved as a routine with a name (e.g. "Friday WOD"). Next time it can be picked from the session screen, or by saying its name, and changed a little before saving. Changes made on the day are saved with that workout; the saved routine changes only when the user taps "Update routine"
+    - g. The movements count toward the muscle groups they train at half credit, like helper muscles (requirement No. 19c), so HIIT and CrossFit sessions show on the body heat map
