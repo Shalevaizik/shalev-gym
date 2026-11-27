@@ -10,6 +10,8 @@ Add each idea as a new line under **New ideas**, with the date. A few words are 
 
 Why: the gym apps Shalev tried that suggest a daily workout mostly fill a preset set of checkboxes and don't really take previous workouts or targeted muscle groups into account. That's the gap this app fills.
 
+**Keep it simple** (2026-11-27). What the user sees first is simple and readable at a glance in the gym; more detail is there, one tap away, only when they ask for it. The app can track and work out more than it shows (e.g. 20 muscles behind 6 muscle groups).
+
 ## New ideas
 
 - 2026-11-21: AI agent features (an AI like Claude built into the app). Ideas, most useful first:
