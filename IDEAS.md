@@ -57,7 +57,9 @@ Not in 1.3.0: design changes come in a future version (Shalev, 2026-11-23).
 
 - 2026-11-23: A new look, based on three reference designs in Shalev's Google Drive folder "design ideas" (images 1–3 and the "Personal Touch" notes). What Shalev liked: the colour palettes, the "milky" screens and tiles, the tile arrangements, and the infographics.
   - **Milky glass tiles:** translucent, frosted cards over a dark background or photo, instead of today's flat white cards.
-  - **Dark first,** with one strong accent colour. The references use electric blue (1), lime green (2) and orange (3). To decide: which accent, and whether to keep a light mode.
+  - **Dark only in 1.4.0, with a lime accent** (decided by Shalev, 2026-11-27). The app no longer follows the phone's light mode. A light version of the chosen start screen (D) is kept on the design canvas for future reference, if a light mode is added later.
+  - **Chosen start screen (D, 2026-11-27):** the big weekly ring for workouts and sets, milky glass tiles, a weekly calendar strip (Sunday to Saturday, trained days with their type, rest days marked, today highlighted), a full-width "Start a new workout" button, and a bottom tab bar: Home, Workouts, Analyse, Eat (soon), Challenge (soon). Design canvas: https://claude.ai/artifact/MiQ1ZUC1waYJpFzef6hUi5
+  - **Workout screen:** the sets of the current exercise as one row of tiles that scrolls sideways (newest and "next" on the right), with an "All sets" link to the Session log.
   - **Infographics:** big numbers, progress rings and gauges (e.g. "75% of this week's goal"), streaks, small charts, and stat tiles (calories, duration, workouts done this week).
   - **Tile grid:** stats in tiles of different sizes (like reference 2's 58 min / 176 bpm / 3.24 km), e.g. for the workout summary and the start screen.
   - Rounded pill buttons, rows of icons, and possibly a bottom tab bar (reference 3). Reference 3 also has an "Ask me anything" box, which fits AI idea 2 (ask your training history).
