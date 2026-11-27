@@ -11,7 +11,8 @@ import { t } from '@/i18n/core';
 import { startLanguage } from '@/i18n/language';
 import { AppMenu } from '@/ui/AppMenu';
 import { Button } from '@/ui/Button';
-import { useTheme } from '@/ui/theme';
+import { FONT, useTheme } from '@/ui/theme';
+import { SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 
 // The language is chosen before anything draws, so every screen starts in it (Hebrew or English).
 const language = startLanguage();
@@ -46,6 +47,7 @@ function Routes() {
       screenOptions={{
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
+        headerTitleStyle: { fontFamily: FONT.display, fontSize: 19 },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: theme.background, paddingBottom: navBarSpace },
       }}>
@@ -125,6 +127,9 @@ async function openDatabase(db: Parameters<typeof migrate>[0]) {
 }
 
 export default function RootLayout() {
+  // Space Grotesk for headings and big numbers (design D). Screens draw straight away in the phone's
+  // font and switch once it has loaded, so nothing waits on it.
+  useFonts({ SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
   const [dbError, setDbError] = useState<Error | null>(null);
   const [attempt, setAttempt] = useState(0);
   // Called while the database component renders, so the state update waits a tick.
@@ -151,7 +156,7 @@ export default function RootLayout() {
       ) : (
         <SQLiteProvider databaseName={DATABASE_NAME} key={attempt} onError={onDbError} onInit={openDatabase}>
           <AuthProvider>
-            <StatusBar style="auto" />
+            <StatusBar style="light" />
             <Routes />
           </AuthProvider>
         </SQLiteProvider>

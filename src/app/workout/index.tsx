@@ -8,7 +8,9 @@ import { useAuth } from '@/auth/AuthProvider';
 import { closeStaleWorkout, getActiveWorkout, startWorkout } from '@/data/workoutRepo';
 import { formatTime, type Workout } from '@/domain/workout';
 import { t } from '@/i18n/core';
+import { Glow } from '@/ui/Glow';
 import { SectionButton } from '@/ui/SectionButton';
+import { TabBar } from '@/ui/TabBar';
 import { useTheme } from '@/ui/theme';
 
 // Behind the Workout button (requirement 18a): continue the workout in progress, or start a new
@@ -21,6 +23,7 @@ export default function WorkoutHome() {
   const [active, setActive] = useState<Workout | null | undefined>(undefined);
   const [starting, setStarting] = useState(false);
   const [smartNotice, setSmartNotice] = useState(false);
+  const [soon, setSoon] = useState<'eat' | 'challenge' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const userId = user?.id;
 
@@ -29,6 +32,7 @@ export default function WorkoutHome() {
       if (!userId) return;
       let cancelled = false;
       setSmartNotice(false);
+      setSoon(null);
       (async () => {
         try {
           await closeStaleWorkout(db, userId, new Date());
@@ -63,6 +67,8 @@ export default function WorkoutHome() {
   }
 
   return (
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+    <Glow left={-40} top={-60} opacity={0.16} />
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.column}>
         {active ? (
@@ -118,11 +124,24 @@ export default function WorkoutHome() {
         )}
       </View>
     </ScrollView>
+    <View style={styles.bottom}>
+      {soon && (
+        <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.textMuted }]}>
+          {soon === 'eat'
+            ? t('Eat is coming soon. Nutrition tracking will be added in a later version.')
+            : t('Challenges are coming in a later version: pick a workout you did and challenge a friend to beat it.')}
+        </Text>
+      )}
+      <TabBar current="workouts" onSoon={setSoon} />
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { padding: 20, flexGrow: 1 },
+  bottom: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 14, gap: 10 },
   column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 16 },
   heading: { fontSize: 13, fontWeight: '700', letterSpacing: 0.9, marginBottom: -6, textAlign: 'left' },
   message: { fontSize: 15, lineHeight: 21, textAlign: 'center' },

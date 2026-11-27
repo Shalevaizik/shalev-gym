@@ -10,7 +10,11 @@ The version number lives in `app.json` (`expo.version`) and is shown by the phon
 
 ## 1.4.0: next
 
-Not started. Planned so far: the realistic male and female body map (see IDEAS.md).
+In progress. Planned: the design session's choices (design canvas: https://claude.ai/artifact/MiQ1ZUC1waYJpFzef6hUi5) and requirement 25 (the anatomical body map with detailed muscles).
+
+Done so far:
+
+- Design D, dark only (2026-11-28): every screen uses the new theme (near-black, lime accent, milky glass tiles, Space Grotesk headings). The start screen shows this week's ring (workouts of 4, sets of 80) and the Sunday to Saturday week, a full-width "Start a new workout" button and a tab bar (Home, Workouts, Analyse, Eat and Challenge coming soon). The workout screen shows the current exercise's sets as a row of tiles that scrolls sideways. The weekly goals (4 workouts, 80 sets) are fixed until a goal setting exists.
 
 The app's version number in `app.json` stays 1.3.0 until 1.4.0 is built: automatic updates only reach phones whose installed version matches it, so changing it early would stop fixes from reaching the 1.3.0 build.
 

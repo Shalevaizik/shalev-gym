@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { IconName } from './Button';
-import { useTheme } from './theme';
+import { FONT, useTheme } from './theme';
 
 type Props = {
   label: string;
@@ -25,7 +25,12 @@ export function SectionButton({ label, detail, icon, background, foreground, onP
         accessibilityRole="button"
         android_ripple={{ color: theme.ripple }}
         onPress={onPress}
-        style={({ pressed }) => [styles.button, { backgroundColor: background }, pressed && styles.pressed]}>
+        style={({ pressed }) => [
+          styles.button,
+          // Glass tiles get a thin edge; a solid colour (the lime main action) needs none.
+          { backgroundColor: background, borderColor: background.startsWith('rgba') ? theme.border : background },
+          pressed && styles.pressed,
+        ]}>
         <Ionicons color={foreground} name={icon} size={34} />
         <View style={styles.text}>
           <View style={styles.titleRow}>
@@ -49,10 +54,11 @@ export function SectionButton({ label, detail, icon, background, foreground, onP
 }
 
 const styles = StyleSheet.create({
-  clip: { borderRadius: 20, overflow: 'hidden' },
+  clip: { borderRadius: 22, overflow: 'hidden' },
   button: {
     minHeight: 112,
-    borderRadius: 20,
+    borderRadius: 22,
+    borderWidth: 1,
     paddingHorizontal: 22,
     paddingVertical: 18,
     flexDirection: 'row',
@@ -61,7 +67,7 @@ const styles = StyleSheet.create({
   },
   text: { flex: 1, minWidth: 0, gap: 4 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  label: { fontSize: 24, fontWeight: '800', flexShrink: 1 },
+  label: { fontSize: 23, fontFamily: FONT.display, flexShrink: 1 },
   detail: { fontSize: 15, opacity: 0.92 },
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   badgeText: { fontSize: 12, fontWeight: '700' },

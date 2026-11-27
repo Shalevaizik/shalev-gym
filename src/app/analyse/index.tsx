@@ -1,10 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n/core';
 import type { IconName } from '@/ui/Button';
-import { useTheme } from '@/ui/theme';
+import { Glow } from '@/ui/Glow';
+import { TabBar } from '@/ui/TabBar';
+import { FONT, useTheme } from '@/ui/theme';
 
 const SECTIONS: { icon: IconName; title: string; detail: string; href: Href }[] = [
   {
@@ -30,7 +33,11 @@ const SECTIONS: { icon: IconName; title: string; detail: string; href: Href }[] 
 // Behind the Analyse button (requirement 18b).
 export default function Analyse() {
   const theme = useTheme();
+  const [soon, setSoon] = useState<'eat' | 'challenge' | null>(null);
+  useFocusEffect(useCallback(() => setSoon(null), []));
   return (
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+    <Glow left={60} top={-40} opacity={0.14} />
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.column}>
         {SECTIONS.map((section) => (
@@ -46,7 +53,9 @@ export default function Analyse() {
               { backgroundColor: theme.surface, borderColor: theme.border },
               pressed && styles.pressed,
             ]}>
-            <Ionicons color={theme.analyse} name={section.icon} size={30} />
+            <View style={[styles.icon, { backgroundColor: theme.accentSoft }]}>
+              <Ionicons color={theme.accent} name={section.icon} size={26} />
+            </View>
             <View style={styles.text}>
               <Text style={[styles.title, { color: theme.text }]}>{t(section.title)}</Text>
               <Text style={[styles.detail, { color: theme.textMuted }]}>{t(section.detail)}</Text>
@@ -56,15 +65,30 @@ export default function Analyse() {
         ))}
       </View>
     </ScrollView>
+    <View style={styles.bottom}>
+      {soon && (
+        <Text accessibilityLiveRegion="polite" style={[styles.message, { color: theme.textMuted }]}>
+          {soon === 'eat'
+            ? t('Eat is coming soon. Nutrition tracking will be added in a later version.')
+            : t('Challenges are coming in a later version: pick a workout you did and challenge a friend to beat it.')}
+        </Text>
+      )}
+      <TabBar current="analyse" onSoon={setSoon} />
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { padding: 20, flexGrow: 1 },
+  bottom: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 14, gap: 10 },
+  message: { fontSize: 14, textAlign: 'center' },
+  icon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 14 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 18, flexDirection: 'row', gap: 16, alignItems: 'center' },
+  card: { borderWidth: 1, borderRadius: 22, padding: 18, flexDirection: 'row', gap: 16, alignItems: 'center' },
   text: { flex: 1, minWidth: 0, gap: 6 },
-  title: { fontSize: 19, fontWeight: '700' },
+  title: { fontSize: 19, fontFamily: FONT.display },
   detail: { fontSize: 15, lineHeight: 21 },
   pressed: { opacity: 0.8 },
 });

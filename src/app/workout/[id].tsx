@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { randomUUID } from 'expo-crypto';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -30,7 +30,7 @@ import {
   startExercise,
   type NewExercise,
 } from '@/data/exerciseRepo';
-import { equipmentHint, equipmentLabel, formatSetFor, shortSetFor } from '@/domain/equipment';
+import { equipmentHint, equipmentLabel, formatDurationS, formatSetFor, shortSetFor } from '@/domain/equipment';
 import { suggestNext } from '@/domain/suggestions';
 import type { TrainingWorkout } from '@/domain/training';
 import { checkWeight, typicalKg, type WeightDoubt } from '@/domain/weightCheck';
@@ -66,7 +66,8 @@ import { ExerciseCard } from '@/ui/ExerciseCard';
 import { ExerciseConfirm } from '@/ui/ExerciseConfirm';
 import { haptic } from '@/ui/haptics';
 import { MicButton } from '@/ui/MicButton';
-import { useTheme, type Theme } from '@/ui/theme';
+import { Glow } from '@/ui/Glow';
+import { FONT, useTheme, type Theme } from '@/ui/theme';
 import { useSpeechToText } from '@/voice/useSpeechToText';
 
 function goHome() {
@@ -926,6 +927,9 @@ export default function WorkoutScreen() {
             theme={theme}
           />
         ))}
+        {active.length === 1 && target.sets.length > 0 && !keyboardOpen && (
+          <SetRow exercise={target} onAll={openLog} theme={theme} />
+        )}
         {showMic && !doubt && (
           <MicButton
             busy={saving}
@@ -1041,6 +1045,7 @@ export default function WorkoutScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'web' ? undefined : 'padding'} style={styles.flex}>
+      <Glow left={10} top={height * 0.28} opacity={0.14} />
       <View style={[styles.live, { gap, paddingVertical: compact ? 10 : 14 }]}>
         <View style={styles.topBar}>
           <View style={styles.flex}>
@@ -1186,6 +1191,61 @@ export default function WorkoutScreen() {
   );
 }
 
+// The sets of the exercise in progress, as one row of tiles that scrolls sideways (design D): the
+// newest set and the "next" tile stay in view on the right, older ones slide off to the left, so the
+// screen never grows however many sets are done. "All sets" opens the Session log.
+function SetRow({ exercise, onAll, theme }: { exercise: LoggedExercise; onAll: () => void; theme: Theme }) {
+  const row = useRef<ComponentRef<typeof ScrollView>>(null);
+  const trim = (n: number) => String(Math.round(n * 10) / 10);
+  const tile = (set: LoggedSet) =>
+    set.durationS != null
+      ? formatDurationS(set.durationS)
+      : set.weight === null
+        ? `${set.reps ?? '–'}`
+        : `${trim(set.weight)}×${set.reps ?? '–'}`;
+  const total = exercise.sets.length;
+  return (
+    <View style={styles.setRowBox}>
+      <View style={styles.setRowHeader}>
+        <Text style={[styles.setRowCount, { color: theme.textMuted }]}>
+          <Text style={{ color: theme.text, fontWeight: '700' }}>{count(total, 'set')}</Text>
+          {total > 4 ? ` · ${t('swipe for earlier')}` : ''}
+        </Text>
+        <Pressable accessibilityRole="button" hitSlop={10} onPress={onAll}>
+          <Text style={[styles.setRowAll, { color: theme.accent }]}>{t('All sets')}</Text>
+        </Pressable>
+      </View>
+      <ScrollView
+        ref={row}
+        accessibilityLabel={t('Sets done, newest on the right')}
+        contentContainerStyle={styles.setRowContent}
+        horizontal
+        onContentSizeChange={() => row.current?.scrollToEnd({ animated: false })}
+        showsHorizontalScrollIndicator={false}>
+        {exercise.sets.map((set, index) => (
+          <View
+            key={set.id}
+            style={[
+              styles.setTile,
+              { backgroundColor: index === total - 1 ? theme.surfaceStrong : theme.surface, borderColor: index === total - 1 ? theme.border : 'transparent' },
+            ]}>
+            <Text style={[styles.setTileLabel, { color: index === total - 1 ? theme.text : theme.textMuted }]}>
+              {t('SET {n}', { n: index + 1 })}
+            </Text>
+            <Text numberOfLines={1} style={[styles.setTileValue, { color: theme.text }]}>
+              {tile(set)}
+            </Text>
+          </View>
+        ))}
+        <View style={[styles.setTile, styles.setTileNext, { borderColor: theme.accent }]}>
+          <Text style={[styles.setTileLabel, { color: theme.accent }]}>{t('SET {n}', { n: total + 1 })}</Text>
+          <Text style={[styles.setTileValue, { color: theme.textMuted }]}>{t('next')}</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 // The exercise in progress: its name and what was done so far. Every set is in the Session log.
 function CurrentExercise({
   compact,
@@ -1263,7 +1323,16 @@ const styles = StyleSheet.create({
   column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 16 },
   live: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 16 },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  clock: { fontSize: 34, fontWeight: '700', fontVariant: ['tabular-nums'], textAlign: 'left' },
+  clock: { fontSize: 34, fontFamily: FONT.display, fontVariant: ['tabular-nums'], textAlign: 'left' },
+  setRowBox: { gap: 6 },
+  setRowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  setRowCount: { fontSize: 12 },
+  setRowAll: { fontSize: 12, fontWeight: '700' },
+  setRowContent: { gap: 6, paddingRight: 2 },
+  setTile: { width: 62, paddingVertical: 8, borderRadius: 14, borderWidth: 1, alignItems: 'center' },
+  setTileNext: { borderStyle: 'dashed', borderWidth: 1.5 },
+  setTileLabel: { fontSize: 10, fontWeight: '700' },
+  setTileValue: { fontSize: 15, fontFamily: FONT.display, marginTop: 2 },
   clockCompact: { fontSize: 28 },
   logButton: {
     minHeight: 48,
@@ -1325,7 +1394,7 @@ const styles = StyleSheet.create({
   dimmed: { opacity: 0.6 },
   exerciseHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  exerciseName: { fontSize: 26, fontWeight: '800', flexShrink: 1, textAlign: 'left' },
+  exerciseName: { fontSize: 26, fontFamily: FONT.display, flexShrink: 1, textAlign: 'left' },
   exerciseNameSmall: { fontSize: 20 },
   exerciseMeta: { fontSize: 14, marginTop: 2, textAlign: 'left' },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },

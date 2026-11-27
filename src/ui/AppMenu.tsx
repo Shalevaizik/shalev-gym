@@ -95,7 +95,7 @@ export function AppMenu() {
           accessibilityViewIsModal
           style={[
             styles.panel,
-            { top: insets.top + 8, end: 12, backgroundColor: theme.surface, borderColor: theme.border },
+            { top: insets.top + 8, end: 12, backgroundColor: theme.panel, borderColor: theme.border },
           ]}>
           <ScrollView contentContainerStyle={styles.panelContent}>
             <View style={styles.headerRow}>

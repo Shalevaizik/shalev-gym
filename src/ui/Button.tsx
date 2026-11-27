@@ -20,7 +20,7 @@ export function Button({ label, onPress, variant = 'primary', icon, busy, disabl
   const theme = useTheme();
   const colors = {
     primary: { background: theme.accent, foreground: theme.onAccent, border: theme.accent },
-    secondary: { background: 'transparent', foreground: theme.text, border: theme.border },
+    secondary: { background: theme.surface, foreground: theme.text, border: theme.border },
     danger: { background: theme.danger, foreground: theme.onDanger, border: theme.danger },
     plain: { background: 'transparent', foreground: theme.accent, border: 'transparent' },
     dangerPlain: { background: 'transparent', foreground: theme.danger, border: 'transparent' },
@@ -59,10 +59,10 @@ export function Button({ label, onPress, variant = 'primary', icon, busy, disabl
 }
 
 const styles = StyleSheet.create({
-  clip: { borderRadius: 12, overflow: 'hidden' },
+  clip: { borderRadius: 16, overflow: 'hidden' },
   button: {
     minHeight: 52,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
